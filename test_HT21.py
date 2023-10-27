@@ -27,7 +27,7 @@ parser.add_argument(
     '--task', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--output_dir', type=str, default='./test_demo',
+    '--output_dir', type=str, default='../test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--test_intervals', type=int, default=60,
