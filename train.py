@@ -172,7 +172,7 @@ class Trainer():
                                     self.cfg.LR_Thre,
                                     self.cfg.LR_DECAY)
 
-        batch_loss = {'den':AverageMeter(),'den_scale':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'warp':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter()}
+        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'warp':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter()}
 
         loader = self.train_loader
 
@@ -196,60 +196,34 @@ class Trainer():
 
             
             img_pair_num = img.size(0)//2  
-            den, den_scales, mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            den_scales, masks, pre_outflow_map, pre_inflow_map, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            
 
-            pre_inf_cnt, pre_out_cnt = \
-                pre_inflow_map.sum(axis=2).sum(axis=2).detach(), pre_outflow_map.sum(axis=2).sum(axis=2).detach()
+            pre_inf_cnt = []
+            pre_out_cnt = []
+            for scale in range(len(pre_inflow_map)):
+                pre_inf_cnt.append(pre_inflow_map[scale].sum(axis=2).sum(axis=2).detach())
+                pre_out_cnt.append(pre_outflow_map[scale].sum(axis=2).sum(axis=2).detach())
+
 
 
             #    -----------gt generate & loss computation------------------
-            target_ratio = den.shape[2]/img.shape[2]
+            target_ratio = den_scales[0].shape[2]/img.shape[2]
 
-            for b in range(len(target)):
-                # target[b]["points"] = target[b]["points"] * target_ratio
-                # target[b]["sigma"] = target[b]["sigma"] * target_ratio
-                
+            for b in range(len(target)):        
                 for key,data in target[b].items():
                     if torch.is_tensor(data):
                         target[b][key]=data.cuda()
 
 
 
-            gt_den = self.generate_gt.get_den(den.shape, target, target_ratio)
-            for i in range(gt_den.shape[0]):
-                # multi-scale density gt
-                gt_den_np = gt_den[i].detach().cpu().numpy().squeeze()
-                den1 = gt_den_np.copy()
-                den2 = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/2),int(gt_den_np.shape[0]/2)),interpolation = cv2.INTER_CUBIC)*4
-                den3 = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/4),int(gt_den_np.shape[0]/4)),interpolation = cv2.INTER_CUBIC)*16
-              
-
-                if i == 0:
-                    dengt1 = np.expand_dims(den1,0)
-                    dengt2 = np.expand_dims(den2,0)
-                    dengt3 = np.expand_dims(den3,0)
-                    
-                else:
-                    dengt1 = np.vstack((dengt1,np.expand_dims(den1,0)))
-                    dengt2 = np.vstack((dengt2,np.expand_dims(den2,0)))
-                    dengt3 = np.vstack((dengt3,np.expand_dims(den3,0)))
-            gt_den_scales = [torch.Tensor(dengt1[:,None,:,:]).cuda(), torch.Tensor(dengt2[:,None,:,:]).cuda(), torch.Tensor(dengt3[:,None,:,:]).cuda()]
-                
-            # gt_den_scales = []       
-            # for idx, den_scale in enumerate(den_scales):
-            #     scale_ratio = den_scale.shape[2]/img.shape[2]
-            #     gt_den_scales.append(self.generate_gt.get_den(den_scale.shape, target, scale_ratio))
-                
-
-            #     assert den_scale.size() == gt_den_scales[idx].size()
-
-            # assert den.size() == gt_den.size()
+            gt_den_scales = self.generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
+            
+        
 
 
 
-
-
-            gt_mask = torch.zeros(img_pair_num, 2, den.size(2), den.size(3)).cuda()
+            gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
             gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
             con_loss = torch.tensor([0]).cuda()
@@ -259,13 +233,9 @@ class Trainer():
                 if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                    gt_mask, gt_inflow_cnt, gt_outflow_cnt \
-                        = self.generate_gt.get_io_mask(pair_idx, target, match_gt, gt_mask, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
-                    
-
-
-                    
-
+                    gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
+                        = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                
                     # contrastive loss
                     if len(match_gt['a2b'][:, 0]) > 0:
 
@@ -275,34 +245,13 @@ class Trainer():
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
                                                                             self.feature_scale)
-            b, _, h, w = gt_mask.shape
-            # mask
-            for i in range(b*2):
-                # multi-scale density gt
-                gt_mask_np = gt_mask.view(b*2,h,w)[i].detach().cpu().numpy().squeeze()
-                mask1 = gt_mask_np.copy()
-                mask2 = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/2),int(gt_mask_np.shape[0]/2)),interpolation = cv2.INTER_CUBIC)*4
-                mask3 = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/4),int(gt_mask_np.shape[0]/4)),interpolation = cv2.INTER_CUBIC)*16
-                if i == 0:
-                    maskgt1 = np.expand_dims(mask1,0)
-                    maskgt2 = np.expand_dims(mask2,0)
-                    maskgt3 = np.expand_dims(mask3,0)
-                
-                    
-                else:
-                    maskgt1 = np.vstack((maskgt1,np.expand_dims(mask1,0)))
-                    maskgt2 = np.vstack((maskgt2,np.expand_dims(mask2,0)))
-                    maskgt3 = np.vstack((maskgt3,np.expand_dims(mask3,0)))
-                
-            gt_mask_scales = [(torch.Tensor(maskgt1>0)).view(b,2,h,w).cuda(), (torch.Tensor(maskgt2>0)).view(b,2,h//2,w//2).cuda(), (torch.Tensor(maskgt3>0)).view(b,2,h//4,w//4).cuda()]
-
+            
+            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
 
             # overall loss
 
-            # kpi_loss = self.compute_kpi_loss(den, gt_den, den_scales, gt_den_scales, \
-            #                                  mask, gt_mask, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
-            kpi_loss = self.compute_kpi_loss(den, gt_den, den_scales, gt_den_scales, \
-                                             mask, gt_mask_scales, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            
+            kpi_loss = self.compute_kpi_loss(den_scales, gt_den_scales,masks, gt_mask_scales, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
@@ -322,11 +271,10 @@ class Trainer():
                 self.lr_scheduler_thre.step(self.i_tb)
 
             # self.lr_scheduler.step()
-            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.item())
-            batch_loss['den_scale'].update(self.compute_kpi_loss.cnt_loss_scales.item())
-            batch_loss['in'].update(self.compute_kpi_loss.in_loss.item())
-            batch_loss['out'].update(self.compute_kpi_loss.out_loss.item())
-            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss.item())
+            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
+            batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
+            batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
+            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
 
             # batch_loss['warp'].update(warp_loss.item())
@@ -340,7 +288,6 @@ class Trainer():
             if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
           
                 self.writer.add_scalar('loss_den',batch_loss['den'].avg, self.i_tb)
-                self.writer.add_scalar('loss_den_scale',batch_loss['den_scale'].avg, self.i_tb)
 
                 self.writer.add_scalar('loss_mask', batch_loss['mask'].avg, self.i_tb)
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
@@ -349,15 +296,14 @@ class Trainer():
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
                 self.writer.add_scalar('thre_lr', lr2, self.i_tb)
 
-                self.writer.add_scalar('loss_warp', batch_loss['warp'].avg, self.i_tb)
 
 
 
 
                 self.timer['iter time'].toc(average=False)
                
-                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                        (self.epoch, self.i_tb, batch_loss['den'].avg,  batch_loss['den_scale'].avg, batch_loss['mask'].avg,batch_loss['in'].avg,
+                print('[ep %d][it %d][loss_den %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                        (self.epoch, self.i_tb, batch_loss['den'].avg, batch_loss['mask'].avg,batch_loss['in'].avg,
                         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
                 
 
@@ -371,22 +317,19 @@ class Trainer():
                 #                   (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
                 #                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales)
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
-                                  img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), 
-                                  den[0].detach().cpu().numpy() , gt_den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[1].detach().cpu().numpy() , \
-                                #   (mask[0,:,:,:]).detach().cpu().numpy(), gt_mask[0,0:1,:,:].detach().cpu().numpy(), \
-                                #   (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
-                                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, mask, gt_mask_scales)
+                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales)
 
 
-            if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
-                self.timer['val time'].tic()
-                if self.cfg.task == "SP":
-                    self.shift_validate()
-                elif self.cfg.task == "FT":
-                    self.validate()
-                self.net.train()
-                self.timer['val time'].toc(average=False)
-                print('val time: {:.2f}s'.format(self.timer['val time'].diff))
+            # if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
+            #     self.timer['val time'].tic()
+            #     if self.cfg.task == "SP":
+            #         self.shift_validate()
+            #     elif self.cfg.task == "FT":
+            #         self.validate()
+            #     self.net.train()
+            #     self.timer['val time'].toc(average=False)
+            #     print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
             torch.cuda.empty_cache()
 
@@ -440,7 +383,7 @@ class Trainer():
                     
                     else:
 
-                        den, _, _, pre_outflow_map, pre_inflow_map, _, _,_,_, _,_ = self.net(img)
+                        den, _, pre_outflow_map, pre_inflow_map, _, _,_,_, _,_ = self.net(img)
                         pre_inf_cnt, pre_out_cnt = \
                             pre_inflow_map.sum(axis=2).sum(axis=2).detach().cpu(), pre_outflow_map.sum(axis=2).sum(axis=2).detach().cpu()
                         target_ratio = den.shape[2]/img.shape[2]

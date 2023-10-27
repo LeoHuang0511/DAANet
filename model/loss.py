@@ -9,10 +9,16 @@ from misc.gt_generate import GenerateGT
 
 
 class ComputeKPILoss(object):
-    def __init__(self, cfg) -> None:
+    def __init__(self, cfg, scale_num=3) -> None:
 
         self.cfg = cfg
-        self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
+        KPI_dict = {}
+        for scale in range(scale_num):
+            KPI_dict[f"den{scale}"] =  ['gt_cnt', 'pre_cnt']
+            KPI_dict[f"mask{scale}"] =  ['gt_cnt', 'acc_cnt']
+
+
+        self.task_KPI=Task_KPI_Pool(task_setting=KPI_dict, maximum_sample=1000)
         self.DEN_FACTOR = cfg.DEN_FACTOR
         self.gt_generater = GenerateGT(cfg)
         
@@ -20,60 +26,65 @@ class ComputeKPILoss(object):
         
         
 
-    def __call__(self, den, gt_den, den_scales, gt_den_scales, mask, gt_mask, pre_inf_cnt, pre_out_cnt, gt_in_cnt, gt_out_cnt):
-        img_pair_num = den.shape[0]//2
-        # # # counting MSE loss
+    def __call__(self, den_scales, gt_den_scales, masks, gt_masks, pre_inf_cnt, pre_out_cnt, gt_in_cnt, gt_out_cnt):
+        img_pair_num = den_scales[0].shape[0]//2
 
-        assert den.shape == gt_den.shape
-        self.cnt_loss = F.mse_loss(den*self.DEN_FACTOR, gt_den * self.DEN_FACTOR)
 
-        self.cnt_loss_scales = 0
+
+       
+        self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
+        self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
         scale_weight = [1, 0.5,0.05]
-        for i in range(len(den_scales)):
-            
-            assert den_scales[i].shape == gt_den_scales[i].shape
-            self.cnt_loss_scales += F.mse_loss(den_scales[i]*self.DEN_FACTOR, gt_den_scales[i] * self.DEN_FACTOR) * scale_weight[i]
-            # print(F.mse_loss(den_scales[i]*self.DEN_FACTOR, gt_den_scales[i] * self.DEN_FACTOR) )
-        # # # mask loss
-        self.mask_loss = 0
-        for i in range(len(mask)):
-            assert (mask[i][:img_pair_num].shape == gt_mask[i][:,0:1,:,:].shape)and (mask[i][img_pair_num:].shape == gt_mask[i][:,1:2,:,:].shape)
-            self.mask_loss += F.binary_cross_entropy(mask[i][:img_pair_num], gt_mask[i][:,0:1,:,:],reduction = "mean")+ \
-                                F.binary_cross_entropy(mask[i][img_pair_num:], gt_mask[i][:,1:2,:,:],reduction = "mean")
-            # print(F.binary_cross_entropy(mask[i][:img_pair_num], gt_mask[i][:,0:1,:,:],reduction = "mean")+ \
-            #                     F.binary_cross_entropy(mask[i][img_pair_num:], gt_mask[i][:,1:2,:,:],reduction = "mean"))
-            # self.mask_loss = self.focal_loss(mask[:img_pair_num], gt_mask[:,0:1,:,:]) + \
-            #                     self.focal_loss(mask[img_pair_num:], gt_mask[:,1:2,:,:])
+        pre_cnt = []
+        gt_cnt = []
+        for scale in range(len(den_scales)):
+             # # # counting MSE loss
+            assert den_scales[scale].shape == gt_den_scales[scale].shape
+            self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * scale_weight[scale]
+
+             # # # mask loss
         
+            assert (masks[scale][:img_pair_num].shape == gt_masks[scale][:,0:1,:,:].shape)and (masks[scale][img_pair_num:].shape == gt_masks[scale][:,1:2,:,:].shape)
+            self.mask_loss_scales[scale] += F.binary_cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0:1,:,:],reduction = "mean")+ \
+                                F.binary_cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1:2,:,:],reduction = "mean")
+
+            pre_cnt.append(den_scales[scale].sum())
+
         
         # # # inflow/outflow loss
-        # self.in_loss, self.out_loss = self.compute_io_loss(mask, den, gt_mask, gt_den)
-        self.in_loss, self.out_loss = torch.Tensor([0]).cuda(), torch.Tensor([0]).cuda()
+        self.in_loss, self.out_loss = self.compute_io_loss(masks, den_scales, gt_masks, gt_den_scales)
+
 
 
         # # # overall loss
-        img_pair_num = den.shape[0]//2
-        pre_cnt = den.sum()
+        gt_cnt = gt_den_scales[0].sum()
+
+        for scale in range(len(den_scales)):
+
+            self.task_KPI.add({f'den{scale}': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt[scale] - gt_cnt).abs()) },
+                                f'mask{scale}': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
+                                                max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt[scale] - gt_in_cnt).abs().sum() - (pre_out_cnt[scale] - gt_out_cnt).abs().sum()) }})
         
-        gt_cnt = gt_den.sum()
-
-
-
-        self.task_KPI.add({'den': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt - gt_cnt).abs()) },
-                            'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
-                                            max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt - gt_in_cnt).abs().sum() \
-                                                - (pre_out_cnt - gt_out_cnt).abs().sum()) }})
+        
         self.KPI = self.task_KPI.query()
 
         # loss = torch.stack([1*self.cnt_loss   , 0*self.out_loss + 0*self.in_loss+ 1*self.mask_loss])
-        loss = torch.stack([0*self.cnt_loss   ,0*self.mask_loss])
+        
+        loss = torch.stack([self.cnt_loss_scales, self.mask_loss_scales + self.in_loss + self.out_loss]).flatten()
 
-        weight = torch.stack([self.KPI['den'],self.KPI['mask']]).to(loss.device)
+        for scale in range(len(den_scales)):
+            if scale == 0:
+                weight_den = self.KPI[f'den{scale}']
+                weight_mask = self.KPI[f'mask{scale}']
+            else:
+                weight_den = torch.hstack([weight_den, self.KPI[f'den{scale}']])
+                weight_mask = torch.hstack([weight_mask, self.KPI[f'mask{scale}']])
+
+        weight = torch.stack([weight_den, weight_mask]).flatten().to(loss.device)
         weight = -(1-weight) * torch.log(weight+1e-8)
         weight = weight/weight.sum()
 
-        # return weight*loss+ 0.25*self.cnt_loss_scales
-        return 0.3*self.mask_loss + 0.3*self.cnt_loss_scales
+        return weight*loss
 
 
     def compute_con_loss(self, pair_idx, feature1, feature2, match_gt, pois, count_in_pair, feature_scale):
@@ -155,20 +166,23 @@ class ComputeKPILoss(object):
         return loss
 
 
-    def compute_io_loss(self, mask, den, gt_mask, gt_den):
-        img_pair_num = gt_den.shape[0]//2
-        pre_outflow_map = mask[:img_pair_num,:,:,:]* den[0::2,:,:,:].detach() #* (mask[:,0:1,:,:] >= 0.8)
-        pre_inflow_map = mask[img_pair_num:,:,:,:] * den[1::2,:,:,:].detach() #* (mask[:,1:2,:,:] >= 0.8)
-        
-        gt_outflow_map = gt_mask[:,0:1,:,:] * gt_den[0::2,:,:,:] 
-        gt_inflow_map = gt_mask[:,1:2,:,:] * gt_den[1::2,:,:,:] 
+    def compute_io_loss(self, masks, dens, gt_masks, gt_dens):
+        img_pair_num = gt_dens[0].shape[0]//2
+        scale_weight = [1, 0.5,0.05]
 
-        assert (pre_outflow_map.shape == gt_outflow_map.shape) and (pre_inflow_map.shape == gt_inflow_map.shape)
-        
-        out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')
-        in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')
-        # out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map)
-        # in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map)
+        in_loss, out_loss = torch.zeros(len(gt_dens)).cuda(), torch.zeros(len(gt_dens)).cuda()
+
+        for scale in range(len(masks)):
+            pre_outflow_map = masks[scale][:img_pair_num,:,:,:]* dens[scale][0::2,:,:,:].detach() #* (mask[:,0:1,:,:] >= 0.8)
+            pre_inflow_map = masks[scale][img_pair_num:,:,:,:] * dens[scale][1::2,:,:,:].detach() #* (mask[:,1:2,:,:] >= 0.8)
+            
+            gt_outflow_map = gt_masks[scale][:,0:1,:,:] * gt_dens[scale][0::2,:,:,:] 
+            gt_inflow_map = gt_masks[scale][:,1:2,:,:] * gt_dens[scale][1::2,:,:,:] 
+
+            assert (pre_outflow_map.shape == gt_outflow_map.shape) and (pre_inflow_map.shape == gt_inflow_map.shape)
+            
+            out_loss[scale] = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')*scale_weight[scale]
+            in_loss[scale] = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')*scale_weight[scale]
 
         return in_loss, out_loss
     

@@ -2,7 +2,7 @@ import torch
 import torchvision.ops
 from torch import nn
 import torch.nn.functional as F
-from .MSDA import offset_visualization
+# from .MSDA import offset_visualization
 
 class DeformableConv2d(nn.Module):
     def __init__(self,
@@ -53,8 +53,8 @@ class DeformableConv2d(nn.Module):
                                       bias=bias)
         self.offset_loss = 0
     def forward(self, warp_ref, source):
-        # h, w = ref.shape[2:]
-        # max_offset = max(h, w)/4.
+        h, w = warp_ref.shape[2:]
+
         num_group_channel = warp_ref.size()[1] // self.offset_groups
         offset_map = []
         if self.offset != None:
@@ -65,18 +65,15 @@ class DeformableConv2d(nn.Module):
                     source[:,i*num_group_channel:(i+1)*num_group_channel,:,:]], axis = 1)
                 offset_map.append(self.offset_conv(offset_input))
             offset_map = torch.concat(offset_map, axis = 1)
+
         #offset range
-        offset_map = 100* torch.sigmoid(offset_map) - 50
-        # offset_y = offset_map[:,0::2,:,:] #vertical
-        # offset_x = offset_map[:,1::2,:,:] #horizontal
-        # offset_y_mean = torch.mean(offset_x,dim = 1, keepdims = True)
-        # offset_x_mean = torch.mean(offset_y,dim = 1, keepdims = True)
-        # offset = torch.concat([offset_x_mean,offset_y_mean],axis = 1)
-        # offset = self.offset_conv(x)#.clamp(-max_offset, max_offset)
-        offset = offset_visualization(offset_map, 8)
+        offset_range = (min(h, w)*0.5) /2
+        offset_map = offset_range * 2 * torch.sigmoid(offset_map) - offset_range
+
+       
+        # offset = offset_visualization(offset_map, 8)
 
         modulator = 2. * torch.sigmoid(self.modulator_conv(warp_ref))
-        # self.offset_loss = F.l1_loss(offset_x,offset_x_mean.detach()) + F.l1_loss(offset_y, offset_y_mean.detach())
         x = torchvision.ops.deform_conv2d(input=warp_ref, 
                                           offset=offset_map, 
                                           weight=self.regular_conv.weight, 
@@ -85,5 +82,5 @@ class DeformableConv2d(nn.Module):
                                           mask=modulator,
                                           stride=self.stride,
                                           )
-        return x,offset
+        return x, offset_map
 
