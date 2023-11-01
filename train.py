@@ -223,7 +223,9 @@ class Trainer():
 
 
 
-            gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+            # gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+            gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
             gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
             con_loss = torch.tensor([0]).cuda()
@@ -233,8 +235,10 @@ class Trainer():
                 if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
+                    # gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
+                    #     = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                     gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
-                        = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                        = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                 
                     # contrastive loss
                     if len(match_gt['a2b'][:, 0]) > 0:
@@ -247,10 +251,8 @@ class Trainer():
                                                                             self.feature_scale)
             
             gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
-
             # overall loss
 
-            
             kpi_loss = self.compute_kpi_loss(den_scales, gt_den_scales,masks, gt_mask_scales, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 

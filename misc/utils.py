@@ -115,6 +115,14 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
     UNIT_H , UNIT_W = img0.size(2), img0.size(3)
     # for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data,pred_map0, gt_map0, pred_map1, gt_map1, \
     #                                  pred_mask_out, gt_mask_out, pred_mask_in, gt_mask_in, attn_1, attn_2)):
+
+    COLOR_MAP = [
+        [255, 0, 0],
+        [0, 0, 255],
+        [0, 255, 255],
+    ]
+    COLOR_MAP = np.array(COLOR_MAP, dtype="uint8")
+
     for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data)):
         if idx > 1:  # show only one group
             break
@@ -198,16 +206,26 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
 
             ########## mask ###############
-            mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
-            mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
+            # mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
+            # mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
+            mask_out_scale_1 = np.argmax(mask[i][0,:,:,:].detach().cpu().numpy(), axis=0)
+            mask_in_scale_1 =  np.argmax(mask[i][2,:,:,:].detach().cpu().numpy(),axis=0)
 
             gt_mask_out_scale_1 = gt_mask[i][0,0:1,:,:].detach().cpu().numpy()
             gt_mask_in_scale_1 = gt_mask[i][0,1:2,:,:].detach().cpu().numpy()
 
-            mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_out_scale_1 / (mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_in_scale_1 / (mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            gt_mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_out_scale_1 / (gt_mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            gt_mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_in_scale_1 / (gt_mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+            mask_out_scale_1 = cv2.resize(COLOR_MAP[mask_out_scale_1].squeeze(),  (UNIT_W, UNIT_H))
+            mask_in_scale_1 = cv2.resize(COLOR_MAP[mask_in_scale_1].squeeze(),  (UNIT_W, UNIT_H))
+            gt_mask_out_scale_1 = cv2.resize(COLOR_MAP[gt_mask_out_scale_1].squeeze(),  (UNIT_W, UNIT_H))
+            gt_mask_in_scale_1 = cv2.resize(COLOR_MAP[gt_mask_in_scale_1].squeeze(),  (UNIT_W, UNIT_H))
+
+
+
+
+            # mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_out_scale_1 / (mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+            # mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_in_scale_1 / (mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+            # gt_mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_out_scale_1 / (gt_mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+            # gt_mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_in_scale_1 / (gt_mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
             
             mask_out_scale_1 = cv2.cvtColor(mask_out_scale_1, cv2.COLOR_BGR2RGB)
             mask_in_scale_1 = cv2.cvtColor(mask_in_scale_1, cv2.COLOR_BGR2RGB)

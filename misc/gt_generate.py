@@ -4,6 +4,7 @@ from misc.layer import Gaussianlayer
 import numpy as np
 from model.points_from_den import get_ROI_and_MatchInfo
 import cv2
+import matplotlib.pyplot as plt
 class GenerateGT():
     def __init__(self, cfg):
         self.cfg = cfg
@@ -56,31 +57,53 @@ class GenerateGT():
 
         return dot_map
     def get_scale_io_masks(self, gt_mask, scale_num):
-        b, _, h, w = gt_mask.shape
+        b, c, h, w = gt_mask.shape
         # mask
         gt_mask_scales = []
-        gt_mask_scales.append(torch.Tensor(gt_mask>0).float().cuda())
         # print((gt_mask>0).Float().cuda())
 
-        gt_mask = gt_mask.view(b*2, h, w)
+        # gt_mask = gt_mask.view(b*2, h, w)
+        gt_mask = gt_mask.view(b*c, h, w)
 
-        for scale in range(1,scale_num):
-            for i in range(b*2):
+
+        for scale in range(0,scale_num):
+            # for i in range(b*2):
+            for i in range(b*c):
+
                 # multi-scale density gt
                 gt_mask_np = gt_mask[i].detach().cpu().numpy().squeeze().copy()
-                mask = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/(2**scale)),int(gt_mask_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* (2**(2*scale))
+                if scale == 0:
+                    mask = gt_mask_np
+                else:
+                    mask = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/(2**scale)),int(gt_mask_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* (2**(2*scale))
                 
-
                 if i == 0:
                     maskgt = np.expand_dims(mask,0)
 
                 else:
                     maskgt = np.vstack((maskgt,np.expand_dims(mask,0)))
             
-            gt_mask_scales.append(torch.Tensor(maskgt>0).view(b,2,h//(2**scale),w//(2**scale)).cuda())
+            maskgt = torch.Tensor(maskgt>0).view(b,c,h//(2**scale),w//(2**scale)).cuda()
+            # maskgt[:,2,:,:] *= 2.
+
+            seggt = torch.zeros((maskgt.shape[0],2,maskgt.shape[2],maskgt.shape[3])).cuda()
+            seggt[:,0,:,:] = maskgt[:,0,:,:] 
+            seggt[:,0,:,:][maskgt[:,2,:,:].bool()] = 2
+            seggt[:,1,:,:] = maskgt[:,1,:,:]
+            seggt[:,1,:,:][maskgt[:,3,:,:].bool()] = 2
+
+            
+
+
+
+            # gt_mask_scales.append(maskgt)
+            gt_mask_scales.append(seggt.long())
+
 
 
         return gt_mask_scales
+    
+    
 
     def get_pair_io_map(self, pair_idx, target, match_gt, gt_mask, gt_outflow_cnt, gt_inflow_cnt,ratio):
 
@@ -114,6 +137,64 @@ class GenerateGT():
         
         
         return gt_mask, gt_inflow_cnt, gt_outflow_cnt
+    
+    def get_pair_seg_map(self, pair_idx, target, match_gt, gt_mask, gt_outflow_cnt, gt_inflow_cnt,ratio):
+
+        device = target[0]['points'].device
+        gt_mask = gt_mask.clone()
+        gt_outflow_cnt = gt_outflow_cnt.clone()
+        gt_inflow_cnt = gt_inflow_cnt.clone()
+        mask_out = torch.zeros(1, 1, gt_mask.size(2), gt_mask.size(3)).to(device)
+        mask_in = torch.zeros(1, 1, gt_mask.size(2), gt_mask.size(3)).to(device)
+        mask_match_1 = torch.zeros(1, 1, gt_mask.size(2), gt_mask.size(3)).to(device)
+        mask_match_2 = torch.zeros(1, 1, gt_mask.size(2), gt_mask.size(3)).to(device)
+
+
+        out_ind = match_gt['un_a']  #inflow people id
+        in_ind = match_gt['un_b']   #outflow people id
+        match_ind = match_gt['a2b'] #match people id
+
+
+
+        if len(match_ind) > 0:
+            # gt_outflow_cnt[pair_idx] += len(out_ind)
+            
+            # mask_out[0, 0, target[pair_idx * 2]['points'][out_ind, 1].long(), target[pair_idx * 2]['points'][out_ind, 0].long()] = 1
+            mask_match_1[0, 0, (target[pair_idx * 2]['points'][match_ind[:,0]  , 1] * ratio).long(), (target[pair_idx * 2]['points'][match_ind[:,0]  , 0] * ratio).long()] = 1
+            mask_match_2[0, 0, (target[pair_idx * 2+1]['points'][match_ind[:,1]  , 1] * ratio).long(), (target[pair_idx * 2+1]['points'][match_ind[:,1]  , 0] * ratio).long()] = 1
+
+
+
+        if len(out_ind) > 0:
+            gt_outflow_cnt[pair_idx] += len(out_ind)
+            # mask_out[0, 0, target[pair_idx * 2]['points'][out_ind, 1].long(), target[pair_idx * 2]['points'][out_ind, 0].long()] = 1
+            mask_out[0, 0, (target[pair_idx * 2]['points'][out_ind, 1] * ratio).long(), (target[pair_idx * 2]['points'][out_ind, 0] * ratio).long()] = 1
+
+        if len(in_ind) > 0:
+            gt_inflow_cnt[pair_idx] += len(in_ind)
+            # mask_in[0, 0, target[pair_idx * 2+1]['points'][in_ind, 1].long(), target[pair_idx * 2+1]['points'][in_ind, 0].long()] = 1  
+            mask_in[0, 0, (target[pair_idx * 2+1]['points'][in_ind, 1] * ratio).long(), (target[pair_idx * 2+1]['points'][in_ind, 0] * ratio).long()] = 1  
+        # mask_out = self.generate_mask(mask_out)
+        # mask_in = self.generate_mask(mask_in)
+        mask_out = self.Gaussian(mask_out)
+        mask_in = self.Gaussian(mask_in) 
+        mask_match_1 = self.Gaussian(mask_match_1) 
+        mask_match_2 = self.Gaussian(mask_match_2) 
+
+
+
+
+        gt_mask[pair_idx,0,:,:] = mask_out
+        gt_mask[pair_idx,1,:,:] = mask_in
+        gt_mask[pair_idx,2,:,:] = mask_match_1
+        gt_mask[pair_idx,3,:,:] = mask_match_2
+
+
+
+        
+        
+        return gt_mask, gt_inflow_cnt, gt_outflow_cnt
+
 
     # def generate_mask(self, dot_map):
     #     mask = self.Gaussian(dot_map)# > 0

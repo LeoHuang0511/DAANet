@@ -346,10 +346,3 @@ def SENSE_ImgPath_and_Target(base_path,i):
         labels.append({'scene_name':i,'frame':int(img_id.split('.')[0].replace('_resize','')), 'person_id':ids, 'points':points, 'sigma':sigma})
     return img_path, labels
 
-
-def read_LAB_image(path):
-    img = cv2.imread(path)
-    img = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2LAB)
-    img = Image.fromarray(img)
-    return img
-    

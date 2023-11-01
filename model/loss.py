@@ -23,6 +23,14 @@ class ComputeKPILoss(object):
         self.gt_generater = GenerateGT(cfg)
         
         self.focal_loss = FocalLoss(alpha=0.5, gamma=2)
+        self.den_scale_weight = [1, 0.25,0.025]
+        self.io_scale_weight = [1, 2, 0.5]
+        
+
+
+        # scale_weight = [1, 1, 1]
+
+
         
         
 
@@ -34,19 +42,27 @@ class ComputeKPILoss(object):
        
         self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
         self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
-        scale_weight = [1, 0.5,0.05]
+
         pre_cnt = []
         gt_cnt = []
         for scale in range(len(den_scales)):
              # # # counting MSE loss
             assert den_scales[scale].shape == gt_den_scales[scale].shape
-            self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * scale_weight[scale]
+            self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * self.den_scale_weight[scale]
+
 
              # # # mask loss
         
-            assert (masks[scale][:img_pair_num].shape == gt_masks[scale][:,0:1,:,:].shape)and (masks[scale][img_pair_num:].shape == gt_masks[scale][:,1:2,:,:].shape)
-            self.mask_loss_scales[scale] += F.binary_cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0:1,:,:],reduction = "mean")+ \
-                                F.binary_cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1:2,:,:],reduction = "mean")
+            # assert (masks[scale][:img_pair_num].shape == gt_masks[scale][:,0:1,:,:].shape)and (masks[scale][img_pair_num:].shape == gt_masks[scale][:,1:2,:,:].shape)
+            # self.mask_loss_scales[scale] += F.binary_cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0:1,:,:],reduction = "mean")+ \
+            #                     F.binary_cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1:2,:,:],reduction = "mean")
+            # print(masks[scale][:img_pair_num].shape)
+            # print(gt_masks[scale][:,:,:,:])
+
+            # print(gt_masks[scale][:,0,:,:].long())
+                  
+            self.mask_loss_scales[scale] += F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],reduction = "mean")+ \
+                                F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],reduction = "mean")
 
             pre_cnt.append(den_scales[scale].sum())
 
@@ -95,12 +111,15 @@ class ComputeKPILoss(object):
         head_f0 = []
         head_f1 = []
 
+        self.con_inter_loss = torch.zeros(len(feature1)).cuda()
+
+
         for scale in range(len(feature1)):
 
                             
             mdesc0, mdesc1 = self.get_head_feature(pair_idx, feature1[scale], feature2[scale], pois, count_in_pair, feature_scale / (scale+1))
 
-            inter_loss =  inter_loss + \
+            self.con_inter_loss[scale] =   self.con_inter_loss[scale] + \
                 self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1]) * self.cfg.con_scale**(-scale)
             head_f0.append(mdesc0)
             head_f1.append(mdesc1)
@@ -110,18 +129,20 @@ class ComputeKPILoss(object):
         #     self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1]) 
         
         
-        if self.cfg.intra_loss:
-            for scale in range(len(feature1)):
-                if (scale+1) < len(feature1):
-                    intra0 = self.contrastive_loss(head_f0[scale], head_f0[scale+1], match_gt['a2b'][:,0], match_gt['a2b'][:,0],True)
-                    intra1 = self.contrastive_loss(head_f1[scale], head_f1[scale+1], match_gt['a2b'][:,1], match_gt['a2b'][:,1],True)
-                elif (scale+1) == len(feature1):
-                    intra0 = self.contrastive_loss(head_f0[scale], head_f0[0], match_gt['a2b'][:,0], match_gt['a2b'][:,0],True)
-                    intra1 = self.contrastive_loss(head_f1[scale], head_f1[0], match_gt['a2b'][:,1], match_gt['a2b'][:,1],True)
+        # if self.cfg.intra_loss:
+        #     for scale in range(len(feature1)):
+        #         if (scale+1) < len(feature1):
+        #             intra0 = self.contrastive_loss(head_f0[scale], head_f0[scale+1], match_gt['a2b'][:,0], match_gt['a2b'][:,0],True)
+        #             intra1 = self.contrastive_loss(head_f1[scale], head_f1[scale+1], match_gt['a2b'][:,1], match_gt['a2b'][:,1],True)
+        #         elif (scale+1) == len(feature1):
+        #             intra0 = self.contrastive_loss(head_f0[scale], head_f0[0], match_gt['a2b'][:,0], match_gt['a2b'][:,0],True)
+        #             intra1 = self.contrastive_loss(head_f1[scale], head_f1[0], match_gt['a2b'][:,1], match_gt['a2b'][:,1],True)
 
-                intra_loss = intra_loss + intra0 + intra1
+        #         intra_loss = intra_loss + intra0 + intra1
         
-        return inter_loss + intra_loss * self.cfg.intra_loss_alpha
+        # return inter_loss + intra_loss * self.cfg.intra_loss_alpha
+        return self.con_inter_loss[scale].sum()
+    
 
 
 
@@ -168,33 +189,32 @@ class ComputeKPILoss(object):
 
     def compute_io_loss(self, masks, dens, gt_masks, gt_dens):
         img_pair_num = gt_dens[0].shape[0]//2
-        scale_weight = [1, 0.5,0.05]
+
 
         in_loss, out_loss = torch.zeros(len(gt_dens)).cuda(), torch.zeros(len(gt_dens)).cuda()
 
         for scale in range(len(masks)):
-            pre_outflow_map = masks[scale][:img_pair_num,:,:,:]* dens[scale][0::2,:,:,:].detach() #* (mask[:,0:1,:,:] >= 0.8)
-            pre_inflow_map = masks[scale][img_pair_num:,:,:,:] * dens[scale][1::2,:,:,:].detach() #* (mask[:,1:2,:,:] >= 0.8)
+            # pre_outflow_map = masks[scale][:img_pair_num,:,:,:]* dens[scale][0::2,:,:,:].detach() #* (mask[:,0:1,:,:] >= 0.8)
+            # pre_inflow_map = masks[scale][img_pair_num:,:,:,:] * dens[scale][1::2,:,:,:].detach() #* (mask[:,1:2,:,:] >= 0.8)
             
-            gt_outflow_map = gt_masks[scale][:,0:1,:,:] * gt_dens[scale][0::2,:,:,:] 
-            gt_inflow_map = gt_masks[scale][:,1:2,:,:] * gt_dens[scale][1::2,:,:,:] 
+
+            pre_outflow_map = F.softmax(masks[scale],dim=1)[:img_pair_num,1:2,:,:]* dens[scale][0::2,:,:,:].detach() #* (mask[:,0:1,:,:] >= 0.8)
+            pre_inflow_map = F.softmax(masks[scale], dim=1)[img_pair_num:,1:2,:,:] * dens[scale][1::2,:,:,:].detach() #* (mask[:,1:2,:,:] >= 0.8)
+            
+            gt_outflow_map = (gt_masks[scale][:,0:1,:,:] == 1) * gt_dens[scale][0::2,:,:,:] 
+            gt_inflow_map = (gt_masks[scale][:,1:2,:,:] == 1) * gt_dens[scale][1::2,:,:,:] 
 
             assert (pre_outflow_map.shape == gt_outflow_map.shape) and (pre_inflow_map.shape == gt_inflow_map.shape)
             
-            out_loss[scale] = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')*scale_weight[scale]
-            in_loss[scale] = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')*scale_weight[scale]
+            out_loss[scale] = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')*self.io_scale_weight[scale]
+            in_loss[scale] = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')*self.io_scale_weight[scale]
+
+
+
 
         return in_loss, out_loss
     
-    def scale_mask_loss(self, mask, gt_mask):
-        img_pair_num = mask[0].shape[0]//2
-        mask_loss = F.binary_cross_entropy(mask[0][:img_pair_num], gt_mask[0][:,0:1,:,:],reduction = "mean") + \
-                    F.binary_cross_entropy(mask[0][img_pair_num:], gt_mask[0][:,1:2,:,:],reduction = "mean") + \
-                    F.binary_cross_entropy(mask[1][:img_pair_num], gt_mask[1][:,0:1,:,:],reduction = "mean") + \
-                    F.binary_cross_entropy(mask[1][img_pair_num:], gt_mask[1][:,1:2,:,:],reduction = "mean") + \
-                    F.binary_cross_entropy(mask[2][:img_pair_num], gt_mask[2][:,0:1,:,:],reduction = "mean") + \
-                    F.binary_cross_entropy(mask[2][img_pair_num:], gt_mask[2][:,1:2,:,:],reduction = "mean") 
-        return mask_loss
+    
 
     
 class FocalLoss(nn.Module):

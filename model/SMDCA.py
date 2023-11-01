@@ -46,7 +46,9 @@ class SMDCANet(nn.Module):
             nn.ConvTranspose2d(8, 4, 2, stride=2, padding=0, output_padding=0, bias=False),
             nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
 
-            nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
+            # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
+
             ))
         
 
@@ -90,11 +92,13 @@ class SMDCANet(nn.Module):
         for scale in range(len(f_out)):
             f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
             f = self.mask_predict_layer[scale](f)
-            f = torch.sigmoid(f)
+            # f = torch.sigmoid(f)
             masks.append(f)
 
-            pre_outflow_maps.append((f[:img_pair_num,:,:,:])* den_scales[scale][0::2,:,:,:].detach())
-            pre_inflow_maps.append((f[img_pair_num:,:,:,:])* den_scales[scale][1::2,:,:,:].detach())
+            # pre_outflow_maps.append((f[:img_pair_num,:,:,:])* den_scales[scale][0::2,:,:,:].detach())
+            # pre_inflow_maps.append((f[img_pair_num:,:,:,:])* den_scales[scale][1::2,:,:,:].detach())
+            pre_outflow_maps.append((F.softmax(f, dim=1)[:img_pair_num,1:2,:,:])* den_scales[scale][0::2,:,:,:].detach())
+            pre_inflow_maps.append((F.softmax(f, dim=1)[img_pair_num:,1:2,:,:])* den_scales[scale][1::2,:,:,:].detach())
 
         
 
