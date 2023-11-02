@@ -50,6 +50,19 @@ class SMDCANet(nn.Module):
             nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
 
             ))
+        self.confidence_predict_layer = nn.ModuleList()
+        for i in range(3):
+        
+            self.confidence_predict_layer.append(nn.Sequential(
+
+          
+            nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0),
+
+            ))
         
 
     
@@ -87,22 +100,59 @@ class SMDCANet(nn.Module):
 
 
         masks = []
+        confidences = []
+
         pre_outflow_maps = []
         pre_inflow_maps = []
+        den_prob = []
+        io_prob = []
+        upsampled_den = []
+        
         for scale in range(len(f_out)):
             f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
-            f = self.mask_predict_layer[scale](f)
+            mask = self.mask_predict_layer[scale](f)
+            confidence = self.confidence_predict_layer[scale](f)
+            confidence = F.sigmoid(confidence)
+            confidence = F.upsample_nearest(confidence, scale_factor=2**(scale))
+            
             # f = torch.sigmoid(f)
-            masks.append(f)
+            masks.append(mask)
+            confidences.append(confidence)
+        confidences = torch.cat(confidences, dim=1)
 
-            # pre_outflow_maps.append((f[:img_pair_num,:,:,:])* den_scales[scale][0::2,:,:,:].detach())
-            # pre_inflow_maps.append((f[img_pair_num:,:,:,:])* den_scales[scale][1::2,:,:,:].detach())
-            pre_outflow_maps.append((F.softmax(f, dim=1)[:img_pair_num,1:2,:,:])* den_scales[scale][0::2,:,:,:].detach())
-            pre_inflow_maps.append((F.softmax(f, dim=1)[img_pair_num:,1:2,:,:])* den_scales[scale][1::2,:,:,:].detach())
+
+        #     den = F.upsample_nearest(den_scales[scale], size=img.size()[2:])
+        #     upsampled_den.append(den)
+        #     f = F.softmax(F.upsample_nearest(f, size=img.size()[2:]), dim=1)
+        #     den_prob.append(torch.sum(f[:,1:3,:,:], dim=1).unsqueeze(1)) # prob of all pixels that recognised as head
+        #     io_prob.append(f[:,1,:,:].unsqueeze(1)) # prob of all pixels that recognised as inflow/outflow
+
+
+        # upsampled_den = torch.cat(upsampled_den, dim=1)
+        # den_prob = torch.cat(den_prob, dim=1)
+        # den_prob = F.softmax(den_prob, dim=1)
+
+        # io_prob = torch.cat(io_prob, dim=1)
+        # io_prob = F.softmax(io_prob, dim=1)
+
+
+
+        
+        # final_den = torch.zeros(den_scales[0].shape[0],1,den_scales[0].shape[2],den_scales[0].shape[3]).cuda()
+        # final_den[0::2,:,:,:] = torch.sum(upsampled_den[0::2,:,:,:] * den_prob[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+        # final_den[1::2,:,:,:] = torch.sum(upsampled_den[1::2,:,:,:] * den_prob[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
+        # out_den = torch.sum(upsampled_den[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+        # in_den = torch.sum(upsampled_den[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
+
+
+
 
         
 
-        return  den_scales, masks, pre_outflow_maps, pre_inflow_maps, flow, back_flow, feature1, feature2, attn_1, attn_2
+        # return  den_scales, masks, pre_outflow_maps, pre_inflow_maps, flow, back_flow, feature1, feature2, attn_1, attn_2
+        return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
 
     
 

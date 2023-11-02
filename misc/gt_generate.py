@@ -5,6 +5,7 @@ import numpy as np
 from model.points_from_den import get_ROI_and_MatchInfo
 import cv2
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
 class GenerateGT():
     def __init__(self, cfg):
         self.cfg = cfg
@@ -32,7 +33,6 @@ class GenerateGT():
                 gt_den_np = gt_den[i].detach().cpu().numpy().squeeze().copy()
                 den = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/(2**scale)),int(gt_den_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* (2**(2*scale))
                 
-
                 if i == 0:
                     dengt = np.expand_dims(den,0)
 
@@ -194,14 +194,35 @@ class GenerateGT():
         
         
         return gt_mask, gt_inflow_cnt, gt_outflow_cnt
-
-
-    # def generate_mask(self, dot_map):
-    #     mask = self.Gaussian(dot_map)# > 0
     
 
-    #     return mask
+    def get_confidence(self, masks, gt_masks):
+        ce_scales = []
+        img_pair_num = masks[0].shape[0] // 2
+        device = masks[0].device
 
+        for scale in range(len(masks)):
+
+            ce = torch.zeros((masks[scale].shape[0],1,masks[scale].shape[2],masks[scale].shape[3]))
+            ce[:img_pair_num] = -F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],reduction = "none").unsqueeze(1)
+            ce[img_pair_num:] = -F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],reduction = "none").unsqueeze(1)
+            ce = F.upsample_nearest(ce, scale_factor=2**scale)
+            ce = F.adaptive_avg_pool2d(ce, output_size=(int(self.cfg.TRAIN_SIZE[0] * self.cfg.feature_scale), int(self.cfg.TRAIN_SIZE[1] * self.cfg.feature_scale)))
+
+
+            ce_scales.append(ce)
+        ce_scales = torch.cat(ce_scales, dim=1) #(b,3,h,w)
+        gt_confidence = (torch.ones_like(ce_scales)*-1).to(device)
+        for scale in range(gt_confidence.shape[1]):
+            gt_confidence[:,scale][torch.where(torch.argmax(ce_scales,dim=1).squeeze()==scale)] = 1
+            gt_confidence[:,scale][torch.where(torch.argmin(ce_scales,dim=1).squeeze()==scale)] = 0
+
+
+
+        return gt_confidence
+
+
+   
 
                 
                 
