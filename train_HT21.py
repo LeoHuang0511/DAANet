@@ -86,7 +86,7 @@ class Trainer():
             self.train_record = latest_state['train_record']
             self.exp_path = latest_state['exp_path']
             self.exp_name = latest_state['exp_name']
-            self.cfg = latest_state['cfg']
+            # self.cfg = latest_state['cfg']
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -186,7 +186,7 @@ class Trainer():
                                     self.cfg.LR_Thre,
                                     self.cfg.LR_DECAY)
 
-        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'warp':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter()}
+        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'confidence':AverageMeter()}
 
         loader = self.train_loader
 
@@ -210,58 +210,50 @@ class Trainer():
 
             
             img_pair_num = img.size(0)//2  
-            den, mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
-            # den, mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, feature1, feature2, attn_1, attn_2, scale_den = self.net(img)
+            den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            
 
-            pre_inf_cnt, pre_out_cnt = \
-                pre_inflow_map.sum(axis=2).sum(axis=2).detach(), pre_outflow_map.sum(axis=2).sum(axis=2).detach()
+            pre_inf_cnt = []
+            pre_out_cnt = []
+            # for scale in range(len(pre_inflow_map)):
+            #     pre_inf_cnt.append(pre_inflow_map[scale].sum(axis=2).sum(axis=2).detach())
+            #     pre_out_cnt.append(pre_outflow_map[scale].sum(axis=2).sum(axis=2).detach())
+
 
 
             #    -----------gt generate & loss computation------------------
-            # print(den.shape)
+            target_ratio = den_scales[0].shape[2]/img.shape[2]
 
-            target_ratio = den.shape[2]/cfg.TRAIN_SIZE[0]
-
-            for b in range(len(target)):
-                target[b]["points"] = target[b]["points"] * target_ratio
-                target[b]["sigma"] = target[b]["sigma"] * target_ratio
-
+            for b in range(len(target)):        
                 for key,data in target[b].items():
                     if torch.is_tensor(data):
                         target[b][key]=data.cuda()
-                        
+
+
+
+            gt_den_scales = self.generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
             
-                        
-            gt_den = self.generate_gt.get_den(den.shape, target, 1)
+        
 
-            # scale_den_loss = torch.tensor([0]).cuda()
-            # for scale in range(len(scale_den)):
-            #     scale_gt_den = self.generate_gt.get_den(scale_den[scale].shape, target, cfg.feature_scale * (0.5**scale))
-                
 
-            #     scale_den_loss =  scale_den_loss + F.mse_loss(scale_gt_den, scale_den[scale], reduction="mean")
 
-            
-            # gt_mask = torch.zeros(img_pair_num, 2, den.size(2), den.size(3)).cuda()
+            # gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+            gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
 
-            gt_mask = torch.zeros(img_pair_num, 2, den.size(2), den.size(3)).cuda()
-            assert den.size() == gt_den.size()
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
             gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
-            con_loss = torch.tensor([0]).cuda()
+            con_loss = torch.Tensor([0]).cuda()
             for pair_idx in range(img_pair_num):
                 count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                 
                 if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                    gt_mask, gt_inflow_cnt, gt_outflow_cnt \
-                        = self.generate_gt.get_io_mask(pair_idx, target, match_gt, gt_mask, gt_outflow_cnt, gt_inflow_cnt, 1)
-                    
-
-
-                   
-
+                    # gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
+                    #     = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                    gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
+                        = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                
                     # contrastive loss
                     if len(match_gt['a2b'][:, 0]) > 0:
 
@@ -271,14 +263,40 @@ class Trainer():
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
                                                                             self.feature_scale)
+            con_loss /= cfg.TRAIN_BATCH_SIZE
             
+            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
             # overall loss
 
-            kpi_loss = self.compute_kpi_loss(den, gt_den, mask, gt_mask, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
-            # warp_loss = self.net.deformable_alignment.warp_loss
-            # all_loss = (kpi_loss + con_loss *cfg.coleo89n_alpha).sum()
-            all_loss = (kpi_loss + con_loss *cfg.con_alpha).sum()
+            ############  gt confidence ################
+            gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
+            assert confidence.shape == gt_confidence.shape
+            bce_weight = torch.ones_like(gt_confidence)
+            bce_weight[torch.where(gt_confidence==-1)] = 0
+            confidence_loss = F.binary_cross_entropy(confidence, gt_confidence,weight=bce_weight, reduction="mean")
 
+
+            ############ generate final den and io flow ########
+            final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'train')
+            
+            # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
+            # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
+            # in_den = torch.sum(in_den, dim=1).unsqueeze(1) / in_den.shape[1]
+
+
+
+
+
+            ##############################################
+
+            
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            
+
+
+            # warp_loss = self.net.deformable_alignment.warp_loss
+            
+            all_loss = (kpi_loss + con_loss *cfg.con_alpha + confidence_loss).sum()
             # all_loss = (kpi_loss + con_loss *cfg.con_alpha + warp_loss * cfg.warp_alpha + scale_mask_loss * cfg.scale_mask_alpha).sum()
 
 
@@ -293,15 +311,16 @@ class Trainer():
                 self.lr_scheduler_thre.step(self.i_tb)
 
             # self.lr_scheduler.step()
-            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.item())
-            batch_loss['in'].update(self.compute_kpi_loss.in_loss.item())
-            batch_loss['out'].update(self.compute_kpi_loss.out_loss.item())
-            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss.item())
+            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
+            batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
+            batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
+            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
+            batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
+            batch_loss['confidence'].update(confidence_loss.item())
+
 
             # batch_loss['warp'].update(warp_loss.item())
-            # batch_loss['scale_den'].update(scale_den_loss.item())
-
 
             self.train_record = update_model(self, None, val=False)
 
@@ -311,16 +330,16 @@ class Trainer():
 
             if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
           
-                self.writer.add_scalar('loss_den',batch_loss['den'].avg, self.i_tb)
+                self.writer.add_scalar('loss_den_overall',batch_loss['den'].avg, self.i_tb)
+                self.writer.add_scalar('loss_den',batch_loss['scale_den'].avg, self.i_tb)
                 self.writer.add_scalar('loss_mask', batch_loss['mask'].avg, self.i_tb)
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
+                self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
+
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
                 self.writer.add_scalar('thre_lr', lr2, self.i_tb)
-
-                self.writer.add_scalar('loss_warp', batch_loss['warp'].avg, self.i_tb)
-                self.writer.add_scalar('loss_scale_den', batch_loss['scale_den'].avg, self.i_tb)
 
 
 
@@ -328,34 +347,26 @@ class Trainer():
 
                 self.timer['iter time'].toc(average=False)
                
-                # print('[ep %d][it %d][loss_den %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                #         (self.epoch, self.i_tb, batch_loss['den'].avg, batch_loss['mask'].avg,batch_loss['in'].avg,
-                #         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
-                print('[ep %d][it %d][loss_den %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][loss_scale_den %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                        (self.epoch, self.i_tb, batch_loss['den'].avg, batch_loss['mask'].avg,batch_loss['in'].avg,
-                        batch_loss['out'].avg,batch_loss['con'].avg, batch_loss['scale_den'].avg, lr1, lr2, self.timer['iter time'].diff))
-#               
+                print('[ep %d][it %d][loss_den %.4f][loss_den %.4f][loss_mask %.4f][loss_conf %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['confidence'].avg, batch_loss['in'].avg,
+                        batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
+                
+
 
 
             if (self.i_tb) % self.cfg.SAVE_VIS_FREQ == 0:
-                save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, img[0].clone().unsqueeze(0), \
-                                  img[1].clone().unsqueeze(0), den[0].detach().cpu().numpy() , \
-                                  gt_den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[1].detach().cpu().numpy() , \
-                                  (mask[0,:,:,:]).detach().cpu().numpy(), gt_mask[0,0:1,:,:].detach().cpu().numpy(), \
-                                  (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
-                                     f_flow , b_flow,\
-                                     attn_1, attn_2)
-                # save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 1, img[2].clone().unsqueeze(0), \
-                #                   img[3].clone().unsqueeze(0), den[0].detach().cpu().numpy() , \
-                #                   gt_den[2].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[3].detach().cpu().numpy() , \
-                #                   (mask[1,:,:,:]).detach().cpu().numpy(), gt_mask[1,0:1,:,:].detach().cpu().numpy(), \
-                #                   (mask[img.size(0)//2 +1,:,:,:]).detach().cpu().numpy(), gt_mask[1,1:2,:,:].detach().cpu().numpy(),\
-                #                      f_flow , b_flow,\
-                #                      attn_1, attn_2)
-                                    #  attn_1[0].detach().cpu().numpy(), attn_2[0].detach().cpu().numpy())
-                                     
+                # save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
+                #                   img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), 
+                #                   den[0].detach().cpu().numpy() , gt_den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[1].detach().cpu().numpy() , \
+                #                   (mask[0,:,:,:]).detach().cpu().numpy(), gt_mask[0,0:1,:,:].detach().cpu().numpy(), \
+                #                   (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
+                #                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales)
+                save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
+                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
-                
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
                 self.timer['val time'].tic()
@@ -368,7 +379,6 @@ class Trainer():
                 print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
             torch.cuda.empty_cache()
-
 
 
     def validate(self):
@@ -421,20 +431,30 @@ class Trainer():
 
 
 
-                        den, _, pre_outflow_map, pre_inflow_map, _, _,_,_, _,_ = self.net(img)
+                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+
+
+
+                        final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'val')
+
+                        
+
+
+
+
                         pre_inf_cnt, pre_out_cnt = \
-                            pre_inflow_map.sum().detach().cpu(), pre_outflow_map.sum().detach().cpu()
+                            in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
 
 
                         #    -----------gt generate & loss computation------------------
                          
-                        pred_cnt = den[0].sum().item()
+                        pred_cnt = final_den[0].sum().item()
 
 
                 
 
                         if vi == 0:
-                            pred_dict['first_frame'] = den[0].sum().item()
+                            pred_dict['first_frame'] = final_den[0].sum().item()
 
 
                         pred_dict['inflow'].append(pre_inf_cnt)

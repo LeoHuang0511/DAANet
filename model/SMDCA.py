@@ -153,6 +153,65 @@ class SMDCANet(nn.Module):
 
         # return  den_scales, masks, pre_outflow_maps, pre_inflow_maps, flow, back_flow, feature1, feature2, attn_1, attn_2
         return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+    
+    def scale_fuse(self, den_scales, masks, confidence, mode):
+
+        img_pair_num = den_scales[0].shape[0]//2
+        dens = []
+        out_dens = []
+        in_dens = []
+        den_probs = []
+        io_probs = []
+
+        for scale in range(len(masks)):
+            den = torch.zeros_like(den_scales[scale]).cuda()
+            den_prob = torch.sum(torch.softmax(masks[scale],dim=1)[:,1:3,:,:], dim=1).unsqueeze(1)
+            io_prob = torch.softmax(masks[scale], dim=1)[:,1,:,:].unsqueeze(1)
+
+            den_probs.append(den_prob)
+            io_probs.append(io_prob)
+
+
+            den[0::2,:,:,:] = den_scales[scale][0::2,:,:,:] * den_prob[:img_pair_num,:,:,:]
+            den[1::2,:,:,:] = den_scales[scale][1::2,:,:,:] * den_prob[img_pair_num:,:,:,:]
+            out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
+            in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
+
+
+            den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+            out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+            in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+            
+            dens.append(den)
+            out_dens.append(out_den)
+            in_dens.append(in_den)
+        
+        dens = torch.cat(dens, dim=1)
+
+        out_dens = torch.cat(out_dens, dim=1)
+        in_dens = torch.cat(in_dens, dim=1)
+
+
+        confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale)
+
+        if mode == "train":
+            conf_mask = torch.zeros_like(confidence).cuda()
+            for scale in range(conf_mask.shape[1]):
+                conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
+        else:
+            conf_mask = torch.softmax(confidence,dim=1)
+
+
+        final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
+
+
+        final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+        final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
+        out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+        in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
+        return final_den, out_dens, in_dens, den_probs, io_probs
 
     
 

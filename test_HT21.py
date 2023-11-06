@@ -76,6 +76,8 @@ opt = parser.parse_args()
 
 opt.VAL_INTERVALS = opt.test_intervals
 
+opt.TRAIN_BATCH_SIZE = opt.VAL_BATCH_SIZE
+
 opt.mode = 'test'
 
 
@@ -123,76 +125,90 @@ def test(cfg, cfg_data):
             pred_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
             img_pair_idx = 0
             for vi, data in enumerate(gen_tqdm, 0):
-                img, _ = data
-                img = img[0]
-                img = torch.stack(img, 0).cuda()
-                if cfg.task == 'SP':
-                    print("Testing code isn't completed")
-                    break
-                elif cfg.task == 'FT':    
+                    img, _ = data
+                    img = img[0]
+                    
+                    img = torch.stack(img,0).cuda()
+                    img_pair_num = img.shape[0]//2
+                 
+ 
+                    
                     b, c, h, w = img.shape
-                    if h % 64 != 0:
-                        pad_h = 64 - h % 64
-                    else:
-                        pad_h = 0
-                    if w % 64 != 0:
-                        pad_w = 64 - w % 64
-                    else:
-                        pad_w = 0
+                    if h % 64 != 0: pad_h = 64 - h % 64
+                    else: pad_h = 0
+                    if w % 64 != 0: pad_w = 64 - w % 64
+                    else: pad_w = 0
                     pad_dims = (0, pad_w, 0, pad_h)
                     img = F.pad(img, pad_dims, "constant")
 
-                    if vi % cfg.test_intervals == 0 or vi == len(sub_valset) - 1:
+
+
+                    if vi % cfg.VAL_INTERVALS== 0 or vi ==len(sub_valset)-1:
                         frame_signal = 'match'
-                    else:
-                        frame_signal = 'skip'
+                    else: frame_signal = 'skip'
 
-                    if frame_signal == 'match' or not cfg.skip_flag:
-                        pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, _, _,attn_1, attn_2 = net(img)
-                        # pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, _, _,attn_1, attn_2, f_sou, f_align = net(img)
-
-
-                        # pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, attn_ref, attn_sou, _ = net(img)
-                        pre_inflow, pre_outflow = \
-                            pre_inflow_map.sum().detach().cpu(), pre_outflow_map.sum().detach().cpu()
-
-                        #=========================================================
-                        pred_cnt = pred_map[0].sum().item()
-                        ##=====================================================
+                    if frame_signal == 'skip':
                         
-                        if vi == 0:
-                            pred_dict['first_frame'] = pred_cnt
-                            
-                        pred_dict['inflow'].append(pre_inflow)
-                        pred_dict['outflow'].append(pre_outflow)
-                          
-                    if frame_signal == 'match':
+                        continue
                     
-                        pre_crowdflow_cnt, _, _ = compute_metrics_single_scene(pred_dict, None, intervals, target=False)
+                    else:
+
+
+
+                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+
+
+
+                        final_den, out_den, in_den, den_probs, io_probs = net.scale_fuse(den_scales, masks, confidence, 'val')
+
+                        
+
+
+
+
+                        pre_inf_cnt, pre_out_cnt = \
+                            in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
+
+
+                        #    -----------gt generate & loss computation------------------
+                         
+                        pred_cnt = final_den[0].sum().item()
+
+
+                
+
+                        if vi == 0:
+                            pred_dict['first_frame'] = final_den[0].sum().item()
+
+
+                        pred_dict['inflow'].append(pre_inf_cnt)
+                        pred_dict['outflow'].append(pre_out_cnt)
                        
 
+                        pre_crowdflow_cnt, _, _ = compute_metrics_single_scene(pred_dict, None, 1, target=False)
                         print(f'den_gt: {None} den_pre: {pred_cnt} mae: {None}')
-                        print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.squeeze().cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.squeeze().cpu().numpy(),2)}')
+                        print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.squeeze().cpu().numpy(),2)},  pre_inflow: {np.round(pre_inf_cnt.squeeze().cpu().numpy(),2)}')
 
                         img_pair_idx+=1
             
                         if img_pair_idx % cfg.save_freq == 0:
                              if img_pair_idx % cfg.save_freq == 0:
-                                save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform,\
-                                        img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), pred_map[0].detach().cpu().numpy() , \
-                                        torch.ones_like(pred_map[0]).detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(), torch.ones_like( pred_map[1]).detach().cpu().numpy(),\
-                                        pre_mask[0,:,:,:].detach().cpu().numpy(), torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                                        pre_mask[img.size(0)//2,:,:,:].detach().cpu().numpy(),torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                                        f_flow, b_flow,\
-                                        attn_1[0].detach().cpu().numpy(), attn_2[0].detach().cpu().numpy())
-                                        # f_sou, falign)
-                            # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform,\
-                            #                 img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), pred_map[0].detach().cpu().numpy() , \
-                            #                 torch.ones_like(pred_map[0]).detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(), torch.ones_like( pred_map[1]).detach().cpu().numpy(),\
-                            #                 pre_mask[0,:,:,:].detach().cpu().numpy(), torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                            #                 pre_mask[img.size(0)//2,:,:,:].detach().cpu().numpy(),torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                            #                 f_flow[0].permute(1,2,0).detach().cpu().numpy(),b_flow[0].permute(1,2,0).detach().cpu().numpy(),\
-                            #                 attn_ref[0].squeeze().detach().cpu().numpy(), attn_sou[0].squeeze().detach().cpu().numpy())
+                                gt_confidence = confidence.clone()
+                                gt_den_scales = den_scales.copy()
+                                gt_mask_scales = []
+                                for i in range(3):
+                                    
+
+                                    gt_mask_scales.append(torch.zeros(1,2,masks[i].shape[2], masks[i].shape[3]).long())
+                                
+
+
+                                save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform, 0, 
+                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
+
     #                    
     # +
             scenes_pred_dict.append(pred_dict)

@@ -228,7 +228,7 @@ class Trainer():
 
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
             gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
-            con_loss = torch.tensor([0]).cuda()
+            con_loss = torch.Tensor([0]).cuda()
             for pair_idx in range(img_pair_num):
                 count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                 
@@ -263,62 +263,12 @@ class Trainer():
 
 
             ############ generate final den and io flow ########
-            dens = []
-            out_dens = []
-            in_dens = []
-            den_probs = []
-            io_probs = []
-
-
-            for scale in range(len(masks)):
-                den = torch.zeros_like(den_scales[scale]).cuda()
-                den_prob = torch.sum(torch.softmax(masks[scale],dim=1)[:,1:3,:,:], dim=1).unsqueeze(1)
-                io_prob = torch.softmax(masks[scale], dim=1)[:,1,:,:].unsqueeze(1)
-
-                den_probs.append(den_prob)
-                io_probs.append(io_prob)
-
-
-                den[0::2,:,:,:] = den_scales[scale][0::2,:,:,:] * den_prob[:img_pair_num,:,:,:]
-                den[1::2,:,:,:] = den_scales[scale][1::2,:,:,:] * den_prob[img_pair_num:,:,:,:]
-                out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
-                in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
-
-
-                den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-                out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-                in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-                
-                dens.append(den)
-                out_dens.append(out_den)
-                in_dens.append(in_den)
+            final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'train')
             
-            dens = torch.cat(dens, dim=1)
-
-            out_dens = torch.cat(out_dens, dim=1)
-            in_dens = torch.cat(in_dens, dim=1)
-
-
-            confidence = F.upsample_nearest(confidence, scale_factor = 1//cfg.feature_scale)
-
-            conf_mask = torch.zeros_like(confidence).cuda()
-
-
-            for scale in range(conf_mask.shape[1]):
-                conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
-            # conf_mask[torch.argmax(confidence, dim=1)] = 1
-            final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
-
-
-            final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-            final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
-
-            out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-            in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
 
             # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
-            # out_dens = torch.sum(out_dens, dim=1).unsqueeze(1) / out_dens.shape[1]
-            # in_dens = torch.sum(in_dens, dim=1).unsqueeze(1) / in_dens.shape[1]
+            # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
+            # in_den = torch.sum(in_den, dim=1).unsqueeze(1) / in_den.shape[1]
 
 
 
@@ -327,7 +277,7 @@ class Trainer():
             ##############################################
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_dens, in_dens, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
@@ -400,20 +350,20 @@ class Trainer():
                 #                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales)
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                    den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(),out_dens[0].detach().cpu().numpy(), in_dens[0].detach().cpu().numpy(), \
+                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
-            # if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
-            #     self.timer['val time'].tic()
-            #     if self.cfg.task == "SP":
-            #         self.shift_validate()
-            #     elif self.cfg.task == "FT":
-            #         self.validate()
-            #     self.net.train()
-            #     self.timer['val time'].toc(average=False)
-            #     print('val time: {:.2f}s'.format(self.timer['val time'].diff))
+            if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
+                self.timer['val time'].tic()
+                if self.cfg.task == "SP":
+                    self.shift_validate()
+                elif self.cfg.task == "FT":
+                    self.validate()
+                self.net.train()
+                self.timer['val time'].toc(average=False)
+                print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
             torch.cuda.empty_cache()
 
@@ -467,10 +417,21 @@ class Trainer():
                     
                     else:
 
-                        den, _, pre_outflow_map, pre_inflow_map, _, _,_,_, _,_ = self.net(img)
+                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+
+                        final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'val')
+                        
+
+
+
+
+
                         pre_inf_cnt, pre_out_cnt = \
-                            pre_inflow_map.sum(axis=2).sum(axis=2).detach().cpu(), pre_outflow_map.sum(axis=2).sum(axis=2).detach().cpu()
-                        target_ratio = den.shape[2]/img.shape[2]
+                            in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
+                        
+
+
+                        target_ratio = final_den.shape[2]/img.shape[2]
 
                         for b in range(len(target)):
                             target[b]["points"] = target[b]["points"] * target_ratio
@@ -482,26 +443,32 @@ class Trainer():
 
                         #    -----------gt generate & loss computation------------------
                          
-                        gt_den = self.generate_gt.get_den(den.shape, target,1)
+                        gt_den_scales = self.generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
+                        gt_den = gt_den_scales[0]
                         
-                        gt_mask = torch.zeros(img_pair_num, 2, den.size(2), den.size(3)).cuda()
-                        assert den.size() == gt_den.size()
+                        assert final_den.size() == gt_den.size()
+
+                        gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+
                         gt_in_cnt = torch.zeros(img_pair_num).detach()
                         gt_out_cnt = torch.zeros(img_pair_num).detach()
+
+
                         for pair_idx in range(img_pair_num):
                             count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                             
                             if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
-                                match_gt, _ = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
+                                match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                                _, gt_in_cnt, gt_out_cnt \
-                                    = self.generate_gt.get_io_mask(pair_idx, target, match_gt, gt_mask, gt_out_cnt, gt_in_cnt, 1)
+                                # gt_io_map, gt__gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                                gt_io_map, gt_in_cnt, gt_out_cnt \
+                                    = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
 
 
                         
                         
                         #    -----------Counting performance------------------
-                        gt_count, pred_cnt = gt_den[0].sum().item(),  den[0].sum().item()
+                        gt_count, pred_cnt = gt_den[0].sum().item(),  final_den[0].sum().item()
 
                         
 
@@ -513,7 +480,7 @@ class Trainer():
                 
 
                         if vi == 0:
-                            pred_dict['first_frame'] = den[0].sum().item()
+                            pred_dict['first_frame'] = final_den[0].sum().item()
                             gt_dict['first_frame'] = len(target[0]['person_id'])
 
 
