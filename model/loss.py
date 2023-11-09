@@ -27,14 +27,10 @@ class ComputeKPILoss(object):
         
         self.focal_loss = FocalLoss(alpha=0.5, gamma=2)
         # self.den_scale_weight = [1, 0.25,0.025]
-        self.mask_class_weight = torch.Tensor([1,10,1]).cuda()
         self.den_scale_weight = [1, 1,1]
 
-        # self.io_scale_weight = [1, 2, 0.5]
+        self.mask_class_weight = torch.Tensor([1,1,1]).cuda()
         
-
-
-        # scale_weight = [1, 1, 1]
 
 
         
@@ -49,8 +45,6 @@ class ComputeKPILoss(object):
         self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
         self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
 
-        pre_cnt = []
-        gt_cnt = []
 
         for scale in range(len(den_scales)):
              # # # counting MSE loss
@@ -70,8 +64,6 @@ class ComputeKPILoss(object):
                   
             self.mask_loss_scales[scale] += F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")+ \
                                 F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")
-
-            pre_cnt.append(den_scales[scale].sum())
 
         
         # # # inflow/outflow loss
@@ -111,7 +103,7 @@ class ComputeKPILoss(object):
         
 
 
-        loss = self.cnt_loss + self.cnt_loss_scales.sum()+ self.mask_loss_scales.sum() + (self.in_loss + self.out_loss)
+        loss = self.cnt_loss + 1*self.cnt_loss_scales.sum()+ self.mask_loss_scales.sum() + (self.in_loss + self.out_loss)
         return loss
 
 

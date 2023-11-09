@@ -58,6 +58,7 @@ class Trainer():
             {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
         ]
         
         # self.optimizer = optim.Adam(params)
@@ -86,7 +87,7 @@ class Trainer():
             self.train_record = latest_state['train_record']
             self.exp_path = latest_state['exp_path']
             self.exp_name = latest_state['exp_name']
-            # self.cfg = latest_state['cfg']
+            self.cfg = latest_state['cfg']
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -296,7 +297,7 @@ class Trainer():
 
             # warp_loss = self.net.deformable_alignment.warp_loss
             
-            all_loss = (kpi_loss + con_loss *cfg.con_alpha + confidence_loss).sum()
+            all_loss = (kpi_loss + con_loss *cfg.con_alpha + 1*confidence_loss).sum()
             # all_loss = (kpi_loss + con_loss *cfg.con_alpha + warp_loss * cfg.warp_alpha + scale_mask_loss * cfg.scale_mask_alpha).sum()
 
 

@@ -57,7 +57,7 @@ parser.add_argument('--feature_scale', type=float, default=1/4.)
 
 
 parser.add_argument('--DEN_FACTOR', type=float, default=200.)
-parser.add_argument('--MEAN_STD', type=tuple, default=([0.3467, 0.5197, 0.4980], [0.2125, 0.0232, 0.0410]))
+parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
 
 parser.add_argument(
     '--model_path', type=str, default='',
@@ -93,10 +93,10 @@ def test(cfg, cfg_data):
         device = torch.device("cuda:"+str(torch.cuda.current_device()))
 
         state_dict = torch.load(cfg.model_path,map_location=device)
-        # try:
-        net.load_state_dict(state_dict, strict=True)
-        # except:
-        #     # net.load_state_dict(state_dict, strict=True)
+        try:
+            net.load_state_dict(state_dict, strict=True)
+        except:
+            net.load_state_dict(state_dict["net"], strict=True)
         #     model_dict = net.state_dict()
         #     # load_dict = []
             
@@ -156,6 +156,7 @@ def test(cfg, cfg_data):
 
 
                         den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                    
 
 
 

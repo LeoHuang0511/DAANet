@@ -33,12 +33,12 @@ class GenerateGT():
                 gt_den_np = gt_den[i].detach().cpu().numpy().squeeze().copy()
                 den = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/(2**scale)),int(gt_den_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* (2**(2*scale))
                 
+                
                 if i == 0:
                     dengt = np.expand_dims(den,0)
 
                 else:
                     dengt = np.vstack((dengt,np.expand_dims(den,0)))
-               
             gt_den_scales.append(torch.Tensor(dengt[:,None,:,:]).cuda())
 
         return gt_den_scales

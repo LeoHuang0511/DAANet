@@ -165,8 +165,9 @@ class SMDCANet(nn.Module):
 
         for scale in range(len(masks)):
             den = torch.zeros_like(den_scales[scale]).cuda()
-            den_prob = torch.sum(torch.softmax(masks[scale],dim=1)[:,1:3,:,:], dim=1).unsqueeze(1)
-            io_prob = torch.softmax(masks[scale], dim=1)[:,1,:,:].unsqueeze(1)
+            mask_prob = torch.softmax(masks[scale], dim=1)
+            den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
+            io_prob = mask_prob[:,1,:,:].unsqueeze(1)
 
             den_probs.append(den_prob)
             io_probs.append(io_prob)
@@ -177,10 +178,12 @@ class SMDCANet(nn.Module):
             out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
             in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
 
-
+            
             den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
             out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
             in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+            
+
             
             dens.append(den)
             out_dens.append(out_den)
@@ -194,7 +197,7 @@ class SMDCANet(nn.Module):
 
         confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale)
 
-        if mode == "train":
+        if mode == "train" or mode == 'val':
             conf_mask = torch.zeros_like(confidence).cuda()
             for scale in range(conf_mask.shape[1]):
                 conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
@@ -204,9 +207,9 @@ class SMDCANet(nn.Module):
 
         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
 
-
         final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
         final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
 
         out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
         in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)

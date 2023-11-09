@@ -17,7 +17,9 @@ class VGG16_FPN(nn.Module):
         super(VGG16_FPN, self).__init__()
 
         self.cfg = cfg
-        vgg = models.vgg16_bn(weights='VGG16_BN_Weights.IMAGENET1K_V1')
+        # vgg = models.vgg16_bn(weights='VGG16_BN_Weights.IMAGENET1K_V1')
+        vgg = models.vgg16_bn()
+
         features = list(vgg.features.children())
 
         self.layer1 = nn.Sequential(*features[0:23])

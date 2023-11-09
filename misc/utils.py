@@ -441,8 +441,10 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
         if cfg.mode == 'test':
            
-                  
-            dir = os.path.join(cfg.model_path.replace('exp', cfg.output_dir).replace(cfg.model_path.split('/')[-1],os.path.basename(cfg.model_path).split('_')[3]),scene_name.split('/')[-1])
+            try:    
+                dir = os.path.join(cfg.model_path.replace('exp', cfg.output_dir).replace(cfg.model_path.split('/')[-1],os.path.basename(cfg.model_path).split('_')[3]),scene_name.split('/')[-1])
+            except:
+                dir = './'
         else:
             dir = os.path.join(exp_path, exp_name, 'vis')
         if not os.path.isdir(dir):
