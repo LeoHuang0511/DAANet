@@ -87,10 +87,11 @@ class VGG16_FPN(nn.Module):
 
 
 
-        den_scale = self.neck(f_list)
-        for scale in range(len(den_scale)):
+        f_den = self.neck(f_list)
+        den_scale = []
+        for scale in range(len(f_den)):
             
-            den_scale[scale] = self.scale_loc_head[scale](den_scale[scale])
+            den_scale.append(self.scale_loc_head[scale](f_den[scale]))
       
 
 
@@ -100,7 +101,7 @@ class VGG16_FPN(nn.Module):
         
 
 
-        return f_mask, den_scale
+        return f_mask, den_scale, f_den
     
 
 

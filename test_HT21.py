@@ -156,7 +156,7 @@ def test(cfg, cfg_data):
 
 
                         den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
-                    
+                        
 
 
 

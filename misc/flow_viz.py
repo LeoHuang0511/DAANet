@@ -223,6 +223,10 @@ def compute_color(u, v):
 
     for i in range(0, np.size(colorwheel, 1)):
         tmp = colorwheel[:, i]
+        # print(tmp.shape)
+        # print(k0)
+        # print(k1)
+
         col0 = tmp[k0 - 1] / 255
         col1 = tmp[k1 - 1] / 255
         col = (1 - f) * col0 + f * col1

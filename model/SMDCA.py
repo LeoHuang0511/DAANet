@@ -56,7 +56,9 @@ class SMDCANet(nn.Module):
             self.confidence_predict_layer.append(nn.Sequential(
 
           
-            nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(192, 64, kernel_size=1, stride=1, padding=0),
+            # nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+
             nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
             nn.ReLU(inplace=True),
 
@@ -78,22 +80,25 @@ class SMDCANet(nn.Module):
     def forward(self, img):
 
         img_pair_num = img.size(0)//2 
-        feature, den_scales = self.Extractor(img)
+        feature, den_scales, feature_den = self.Extractor(img)
 
 
 
         feature1 = []
         feature2 = []
-        for fea in feature:
+        feature_den1 = []
+        feature_den2 = []
+        for scale in range(len(feature)):
     
-            feature1.append(fea[0::2,:,:,:])
-            feature2.append(fea[1::2,:,:,:])
+            feature1.append(feature[scale][0::2,:,:,:])
+            feature2.append(feature[scale][1::2,:,:,:])
+
+            feature_den1.append(feature_den[scale][0::2,:,:,:])
+            feature_den2.append(feature_den[scale][1::2,:,:,:])
 
         
 
         
-        for scale in range(len(den_scales)):
-            den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
 
         f_out, f_in, flow , back_flow, attn_1, attn_2= self.deformable_alignment(feature1, feature2)
 
@@ -109,10 +114,19 @@ class SMDCANet(nn.Module):
         upsampled_den = []
         
         for scale in range(len(f_out)):
+
+            den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
+
+
             f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
             mask = self.mask_predict_layer[scale](f)
-            confidence = self.confidence_predict_layer[scale](f)
+
+            # confidence = self.confidence_predict_layer[scale](f)
+            f_den = torch.cat([feature_den1[scale],  feature_den2[scale]],dim=0)
+            confidence = self.confidence_predict_layer[scale](f_den)
+
             confidence = F.sigmoid(confidence)
+
             confidence = F.upsample_nearest(confidence, scale_factor=2**(scale))
             
             # f = torch.sigmoid(f)
@@ -194,15 +208,23 @@ class SMDCANet(nn.Module):
         out_dens = torch.cat(out_dens, dim=1)
         in_dens = torch.cat(in_dens, dim=1)
 
+        confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
 
-        confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale)
 
-        if mode == "train" or mode == 'val':
+        # if mode == "train" or mode == 'val':
+        if mode == "train":
+
             conf_mask = torch.zeros_like(confidence).cuda()
+            confidence = torch.softmax(confidence,dim=1)
             for scale in range(conf_mask.shape[1]):
+        #         # try:
                 conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
+        #         # except:
+        #         #     print(conf_mask[:,scale])
+        #         #     break
         else:
             conf_mask = torch.softmax(confidence,dim=1)
+        # print(torch.where(torch.sum(conf_mask, dim=1)!=1))
 
 
         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()

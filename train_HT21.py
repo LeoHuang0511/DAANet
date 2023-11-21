@@ -87,7 +87,7 @@ class Trainer():
             self.train_record = latest_state['train_record']
             self.exp_path = latest_state['exp_path']
             self.exp_name = latest_state['exp_name']
-            self.cfg = latest_state['cfg']
+            # self.cfg = latest_state['cfg']
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -271,10 +271,10 @@ class Trainer():
 
             ############  gt confidence ################
             gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
-            assert confidence.shape == gt_confidence.shape
-            bce_weight = torch.ones_like(gt_confidence)
-            bce_weight[torch.where(gt_confidence==-1)] = 0
-            confidence_loss = F.binary_cross_entropy(confidence, gt_confidence,weight=bce_weight, reduction="mean")
+            # assert confidence.shape == gt_confidence.shape
+            # bce_weight = torch.ones_like(gt_confidence)
+            # bce_weight[torch.where(gt_confidence==-1)] = 0
+            # confidence_loss = F.binary_cross_entropy(confidence, gt_confidence,weight=bce_weight, reduction="mean")
 
 
             ############ generate final den and io flow ########
@@ -297,7 +297,9 @@ class Trainer():
 
             # warp_loss = self.net.deformable_alignment.warp_loss
             
-            all_loss = (kpi_loss + con_loss *cfg.con_alpha + 1*confidence_loss).sum()
+            # all_loss = (kpi_loss + con_loss *cfg.con_alpha + 0*confidence_loss).sum()
+            all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
+
             # all_loss = (kpi_loss + con_loss *cfg.con_alpha + warp_loss * cfg.warp_alpha + scale_mask_loss * cfg.scale_mask_alpha).sum()
 
 
@@ -318,7 +320,7 @@ class Trainer():
             batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
-            batch_loss['confidence'].update(confidence_loss.item())
+            # batch_loss['confidence'].update(confidence_loss.item())
 
 
             # batch_loss['warp'].update(warp_loss.item())
