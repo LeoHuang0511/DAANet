@@ -63,9 +63,14 @@ class Dataset(data.Dataset):
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
         # img = read_LAB_image(self.imgs_path[index])
-        img = Image.open(self.imgs_path[index])
-        if img.mode != 'RGB':
-            img=img.convert('RGB')
+        # img = Image.open(self.imgs_path[index])
+        img = cv2.imread(self.imgs_path[index])
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(img)
+
+        
+        # if img.mode != 'RGB':
+        #     img=img.convert('RGB')
 #         if img.mode != 'RGB':
 #             img=img.convert('RGB')
 

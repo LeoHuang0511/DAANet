@@ -107,7 +107,7 @@ def save_test_logger(cfg, exp_path,cnt_result, final_result):
 # def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch, img0, img1, pred_map0, gt_map0,\
 #                         pred_map1, gt_map1, pred_mask_out, gt_mask_out, pred_mask_in, gt_mask_in, f_flow,b_flow, attn_1,attn_2,den_scales, gt_den_scales):
                         #attn_ref, attn_sou): 
-def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch, img0, img1, den0, den1, out_map, in_map, conf0, gt_conf0, conf1, gt_conf1,\
+def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch, img0, img1, den0, den1, out_map, in_map, conf0, conf1,\
                        f_flow,b_flow, attn_1,attn_2,den_scales, gt_den_scales, mask, gt_mask, den_probs, io_probs):
 
     pil_to_tensor = standard_transforms.ToTensor()
@@ -129,7 +129,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
     ]
     COLOR_MAP_CONF = np.array(COLOR_MAP_CONF, dtype="uint8")
 
-    for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data, den0, den1, out_map, in_map, conf0, gt_conf0, conf1, gt_conf1)):
+    for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data, den0, den1, out_map, in_map, conf0, conf1)):
         if idx > 1:  # show only one group
             break
 
@@ -219,6 +219,8 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
             ########## mask ###############
             # mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
             # mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
+            
+
             mask_out_scale_1 = np.argmax(mask[i][0,:,:,:].detach().cpu().numpy(), axis=0)
             mask_in_scale_1 =  np.argmax(mask[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy(),axis=0)
             
@@ -284,13 +286,13 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         
         conf_map0 = np.argmax(tensor[6], axis=0)
         conf_map0 = cv2.resize(COLOR_MAP_CONF[conf_map0].squeeze(),  (UNIT_W, UNIT_H))
-        gt_conf_map0 = np.argmax(tensor[7], axis=0)
-        gt_conf_map0 = cv2.resize(COLOR_MAP_CONF[gt_conf_map0].squeeze(),  (UNIT_W, UNIT_H))
-        conf_map1 = np.argmax(tensor[8], axis=0)
+        # gt_conf_map0 = np.argmax(tensor[7], axis=0)
+        # gt_conf_map0 = cv2.resize(COLOR_MAP_CONF[gt_conf_map0].squeeze(),  (UNIT_W, UNIT_H))
+        conf_map1 = np.argmax(tensor[7], axis=0)
         conf_map1 = cv2.resize(COLOR_MAP_CONF[conf_map1].squeeze(),  (UNIT_W, UNIT_H))
 
-        gt_conf_map1 = np.argmax(tensor[9], axis=0)
-        gt_conf_map1 = cv2.resize(COLOR_MAP_CONF[gt_conf_map1].squeeze(),  (UNIT_W, UNIT_H))
+        # gt_conf_map1 = np.argmax(tensor[9], axis=0)
+        # gt_conf_map1 = cv2.resize(COLOR_MAP_CONF[gt_conf_map1].squeeze(),  (UNIT_W, UNIT_H))
 
 
         # pred_color_map0 = cv2.resize(cv2.applyColorMap((255 * tensor[2] / (tensor[2].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
@@ -361,9 +363,9 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         out_map = Image.fromarray(cv2.cvtColor(out_map, cv2.COLOR_BGR2RGB))
         in_map = Image.fromarray(cv2.cvtColor(in_map, cv2.COLOR_BGR2RGB))
         conf_map0 = Image.fromarray(cv2.cvtColor(conf_map0, cv2.COLOR_BGR2RGB))
-        gt_conf_map0 = Image.fromarray(cv2.cvtColor(gt_conf_map0, cv2.COLOR_BGR2RGB))
+        # gt_conf_map0 = Image.fromarray(cv2.cvtColor(gt_conf_map0, cv2.COLOR_BGR2RGB))
         conf_map1 = Image.fromarray(cv2.cvtColor(conf_map1, cv2.COLOR_BGR2RGB))
-        gt_conf_map1 = Image.fromarray(cv2.cvtColor(gt_conf_map1, cv2.COLOR_BGR2RGB))
+        # gt_conf_map1 = Image.fromarray(cv2.cvtColor(gt_conf_map1, cv2.COLOR_BGR2RGB))
 
 
 
@@ -399,7 +401,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         #         gt_den_scales_2_map[2],gt_den_scales_2_map[1],gt_den_scales_2_map[0],black_map,\
         #         pil_gt1, pil_output1, pil_gtmaskin, pil_maskin]
         imgs = [pil_input0,  den0_map, out_map,\
-                black_map, conf_map0, gt_conf_map0,\
+                black_map, conf_map0, black_map,\
                 den_prob_map_1[2],den_prob_map_1[1],den_prob_map_1[0],\
                 io_prob_map_1[2],io_prob_map_1[1],io_prob_map_1[0],\
                 
@@ -414,7 +416,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
                 
                 
                 pil_input1,  den1_map, in_map,\
-                black_map, conf_map1, gt_conf_map1,\
+                black_map, conf_map1, black_map,\
                 den_prob_map_2[2],den_prob_map_2[1],den_prob_map_2[0],\
                 io_prob_map_2[2],io_prob_map_2[1],io_prob_map_2[0],\
                 b_flow_map[2], b_flow_map[1], b_flow_map[0], \

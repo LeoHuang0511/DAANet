@@ -53,6 +53,10 @@ class MultiScaleDeformableAlingment(nn.Module):
             feat, offset_v = self.deformable_convs[level](sou[i - 1], ref[i - 1])
             
             offset_v = offset_visualization(offset_v, 1 //( self.cfg.feature_scale / (2 ** (i - 1))))
+            # print("offset nan: ", torch.isnan(offset_v).any())
+            # print("offset inf: ", torch.isinf(offset_v).any())
+            # print("offset max: ", torch.max(offset_v))
+            # print("offset min: ", torch.min(offset_v))
 
 
             offset_vs.append(offset_v)

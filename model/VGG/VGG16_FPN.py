@@ -77,6 +77,19 @@ class VGG16_FPN(nn.Module):
 
 
     def forward(self, x):
+
+        if torch.isnan(x).any():
+            print(f"!!!!!!!!!!!!!!!!img has nan!!!!!!!!!!!!!!!!!!!!")
+            self.cfg.flag = 1
+            print(torch.where(torch.isnan(x)))
+            exit()
+
+                
+        elif torch.isinf(x).any():
+            print(f"!!!!!!!!!!!!!!!!img has inf!!!!!!!!!!!!!!!!!!!!")
+            self.cfg.flag = 1
+            print(torch.where(torch.isinf(x)))
+            exit()
         f_list = []
         x1 = self.layer1(x)
         f_list.append(x1)
@@ -84,12 +97,24 @@ class VGG16_FPN(nn.Module):
         f_list.append(x2)
         x3 = self.layer3(x2)
         f_list.append(x3)
+        
+        
 
 
 
         f_den = self.neck(f_list)
         den_scale = []
         for scale in range(len(f_den)):
+
+            # if torch.isnan(f_list[scale]).any():
+            #     print(f"!!!!!!!!!!!!!!!!f_list {scale} has nan!!!!!!!!!!!!!!!!!!!!")
+            #     self.cfg.flag = 1
+                
+            # elif torch.isinf(f_list[scale]).any():
+            #     print(f"!!!!!!!!!!!!!!!!f_list {scale} has inf!!!!!!!!!!!!!!!!!!!!")
+            #     self.cfg.flag = 1
+
+            
             
             den_scale.append(self.scale_loc_head[scale](f_den[scale]))
       
@@ -98,6 +123,13 @@ class VGG16_FPN(nn.Module):
         f_mask = self.neck2f(f_list)
         for scale in range(len(f_mask)):
             f_mask[scale] = self.feature_head[scale](f_mask[scale])
+            # if torch.isnan(f_mask[scale]).any():
+            #     print(f"!!!!!!!!!!!!!!!!f_mask {scale} has nan!!!!!!!!!!!!!!!!!!!!")
+            #     self.cfg.flag = 1
+                
+            # elif torch.isinf(f_mask[scale]).any():
+            #     print(f"!!!!!!!!!!!!!!!!f_mask {scale} has inf!!!!!!!!!!!!!!!!!!!!")
+            #     self.cfg.flag = 1
         
 
 

@@ -257,7 +257,7 @@ class Trainer():
             # overall loss
 
             ############  gt confidence ################
-            gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
+            # gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
             # assert confidence.shape == gt_confidence.shape
             # bce_weight = torch.ones_like(gt_confidence)
             # bce_weight[torch.where(gt_confidence==-1)] = 0
@@ -277,6 +277,31 @@ class Trainer():
 
 
             ##############################################
+            # if torch.isnan(final_den).any():
+            #     print("!!!!!!!!!!!!!!!!final den has nan!!!!!!!!!!!!!!!!!!!!")
+            #     self.epoch = self.cfg.MAX_EPOCH
+            #     break
+            # elif torch.isinf(final_den).any():
+            #     print("!!!!!!!!!!!!!!!!final den has inf!!!!!!!!!!!!!!!!!!!!")
+            #     self.epoch = self.cfg.MAX_EPOCH
+            #     break
+            # for scale in range(len(masks)):
+            #     if torch.isnan(masks[scale]).any():
+            #         print(f"!!!!!!!!!!!!!!!!mask {scale} has nan!!!!!!!!!!!!!!!!!!!!")
+            #         self.epoch = self.cfg.MAX_EPOCH
+            #         break
+            #     elif torch.isinf(masks[scale]).any():
+            #         print(f"!!!!!!!!!!!!!!!!mask {scale} has inf!!!!!!!!!!!!!!!!!!!!")
+            #         self.epoch = self.cfg.MAX_EPOCH
+            #         break
+            #     if torch.isnan(den_scales[scale]).any():
+            #         print(f"!!!!!!!!!!!!!!!!den {scale} has nan!!!!!!!!!!!!!!!!!!!!")
+            #         self.epoch = self.cfg.MAX_EPOCH
+            #         break
+            #     elif torch.isinf(den_scales[scale]).any():
+            #         print(f"!!!!!!!!!!!!!!!!den {scale} has inf!!!!!!!!!!!!!!!!!!!!")
+            #         self.epoch = self.cfg.MAX_EPOCH
+            #         break
 
             
             kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
@@ -362,7 +387,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
@@ -744,6 +769,7 @@ if __name__=='__main__':
 
     #_train
     parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
+    parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
     parser.add_argument('--GRID_SIZE', type=int, default=8)
     parser.add_argument('--TRAIN_FRAME_INTERVALS', type=int, nargs='+', default=[40, 85])
     parser.add_argument('--TRAIN_BATCH_SIZE', type=int, default=2)

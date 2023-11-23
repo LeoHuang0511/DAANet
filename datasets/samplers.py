@@ -54,6 +54,8 @@ class CategoriesSampler():
                 self.scene_id.update({scene_name:0})
             self.scene_id[scene_name]+=1
             self.scenes.append(scene_name)
+        self.idx=0
+        
 
     def __len__(self):
         return self.n_sample 
@@ -61,6 +63,8 @@ class CategoriesSampler():
         for i_batch in range(self.n_batch):
             batch = []
             frame_a = torch.randperm(self.n_sample)[:self.n_per]
+            self.idx += 1
+
             for c in frame_a:
                 scene_name = self.scenes[c]
                 # print(c)
