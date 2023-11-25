@@ -286,10 +286,14 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         
         conf_map0 = np.argmax(tensor[6], axis=0)
         conf_map0 = cv2.resize(COLOR_MAP_CONF[conf_map0].squeeze(),  (UNIT_W, UNIT_H))
+        mask0 = gt_mask[0][0,0:1,:,:].detach().cpu().numpy()
+        conf_map0 = conf_map0 * np.repeat(((mask0==1) | (mask0==2)).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
         # gt_conf_map0 = np.argmax(tensor[7], axis=0)
         # gt_conf_map0 = cv2.resize(COLOR_MAP_CONF[gt_conf_map0].squeeze(),  (UNIT_W, UNIT_H))
         conf_map1 = np.argmax(tensor[7], axis=0)
         conf_map1 = cv2.resize(COLOR_MAP_CONF[conf_map1].squeeze(),  (UNIT_W, UNIT_H))
+        mask1 = gt_mask[0][0,1:2,:,:].detach().cpu().numpy()
+        conf_map1 = conf_map1 * np.repeat(((mask1==1) | (mask1==2)).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
 
         # gt_conf_map1 = np.argmax(tensor[9], axis=0)
         # gt_conf_map1 = cv2.resize(COLOR_MAP_CONF[gt_conf_map1].squeeze(),  (UNIT_W, UNIT_H))
@@ -456,7 +460,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         target.save(os.path.join(dir,f'{iter}_{batch}_den.jpg'.format()))
 
         # target.save(os.path.join(exp_path,'onlymean_offset','{}_den.jpg'.format(iter)))
-        
+
 
 
         
@@ -525,7 +529,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
 #     x = []
 #     y = []
-    
+
 #     for idx, tensor in enumerate(zip(img.cpu().data, pred_map, gt_map,binar_map)):
 #         if idx>1:# show only one group
 #             break
