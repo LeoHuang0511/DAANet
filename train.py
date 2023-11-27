@@ -387,7 +387,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 

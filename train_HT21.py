@@ -298,7 +298,7 @@ class Trainer():
 
 
             ############ generate final den and io flow ########
-            final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'train')
+            final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
             
             # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
             # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
@@ -428,7 +428,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
@@ -499,7 +499,7 @@ class Trainer():
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'val')
+                        final_den, out_den, in_den, den_probs, io_probs ,_= self.net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
