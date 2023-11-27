@@ -68,6 +68,19 @@ class SMDCANet(nn.Module):
 
 
         #     ))
+        self.confidence_head = nn.ModuleList()
+        for i in range(3):
+        
+            self.confidence_head.append(nn.Sequential(
+
+            nn.Conv2d(192, 64, kernel_size=1, stride=1, padding=0),
+            # nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+
+            nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+            nn.ReLU(inplace=True),
+
+
+            ))
         self.confidence_predict_layer = nn.Sequential(
 
 #             nn.Dropout2d(0.2),
@@ -84,14 +97,14 @@ class SMDCANet(nn.Module):
             
             
             
-            nn.Conv2d(576, 128, kernel_size=1, stride=1, padding=0),
-
-            nn.BatchNorm2d(128, momentum=BN_MOMENTUM),
-            nn.ReLU(inplace=True),
-            
-            nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+#             nn.Conv2d(576, 128, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(192, 64, kernel_size=3, stride=1, padding=0),
             nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
             nn.ReLU(inplace=True),
+            
+#             nn.Conv2d(128, 64, kernel_size=1, stride=1, padding=0),
+#             nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+#             nn.ReLU(inplace=True),
             
 
             nn.Conv2d(64, 3, kernel_size=1, stride=1, padding=0),
@@ -104,6 +117,7 @@ class SMDCANet(nn.Module):
 
 #         
 
+# +
 
     
 
@@ -175,13 +189,17 @@ class SMDCANet(nn.Module):
             # f = torch.sigmoid(f)
             masks.append(mask)
             # confidences.append(confidence)
+            
+            feature_den[scale] = self.confidence_head[scale](feature_den[scale])
         # confidences = torch.cat(confidences, dim=1)
 
         f_con = torch.cat([feature_den[0],  F.interpolate(feature_den[1],scale_factor=2,mode='bilinear',align_corners=True),
                       F.interpolate(feature_den[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
             
-        f_con = F.adaptive_avg_pool2d(f_con, (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
-        confidences = torch.softmax(self.confidence_predict_layer(f_con), dim=1)
+#         f_con = F.adaptive_avg_pool2d(f_con, (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
+#         confidences = torch.softmax(self.confidence_predict_layer(f_con), dim=1)
+        confidences = self.confidence_predict_layer(f_con)
+
 
 
 
@@ -253,19 +271,18 @@ class SMDCANet(nn.Module):
 
 
         # if mode == "train" or mode == 'val':
-        if mode == "train":
+#         if mode == "train":
 
-            conf_mask = torch.zeros_like(confidence).cuda()
-        #     confidence = torch.softmax(confidence,dim=1)
-            for scale in range(conf_mask.shape[1]):
+#             conf_mask = torch.zeros_like(confidence).cuda()
+#             confidence = torch.softmax(confidence,dim=1)
+#             for scale in range(conf_mask.shape[1]):
         
-                conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
+#                 conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
        
-        else:
-            conf_mask = torch.softmax(confidence,dim=1)
-        # print(torch.where(torch.sum(conf_mask, dim=1)!=1))
-        # if torch.isnan(conf_mask).any():
-        #         print(f"f")
+#         else:
+#             conf_mask = torch.softmax(confidence,dim=1)
+        conf_mask = torch.softmax(confidence,dim=1)
+        
 
 
         # final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
@@ -283,9 +300,10 @@ class SMDCANet(nn.Module):
 
 
 
-        return final_den, out_dens, in_dens, den_probs, io_probs
+        return final_den, out_dens, in_dens, den_probs, io_probs, conf_mask
+# -
 
-    
+
 
 
 
