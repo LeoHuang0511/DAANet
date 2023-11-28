@@ -726,7 +726,7 @@ if __name__=='__main__':
     parser.add_argument('--DATASET', type=str, default='HT21')
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
-    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=800)
+    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
 
 
 
@@ -739,10 +739,10 @@ if __name__=='__main__':
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
     parser.add_argument('--WARMUP_EPOCH', type=int, default=3, help='number of epochs for warm up step in cosine annealing lr scheduler')
     parser.add_argument('--MAX_EPOCH', type=int, default=20)
-    parser.add_argument('--worker', type=int, default=16)
+    parser.add_argument('--worker', type=int, default=4)
 
 
-    parser.add_argument('--con_alpha', type=float, default=0.01)
+    parser.add_argument('--con_alpha', type=float, default=0.1)
     parser.add_argument('--con_scale', type=int, default=1)
     parser.add_argument('--intra_loss', default=False, action='store_true', help="intra loss")
     parser.add_argument('--intra_loss_alpha', type=float, default=0.1)
@@ -758,7 +758,7 @@ if __name__=='__main__':
 
     #_test or val
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
-    parser.add_argument('--VAL_START', type=int, default=14000)
+    parser.add_argument('--VAL_START', type=int, default=999)
 
     # parser.add_argument('--VAL_INTERVALS', type=int, default=75)
     # parser.add_argument('--ADJ_SCALES', type=int, nargs='+', default=[1])
