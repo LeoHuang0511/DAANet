@@ -223,15 +223,17 @@ class ChannelWeightLayer(nn.Module):
 
 
 class SpatialWeightLayer(nn.Module):
-    def __init__(self, kernel_size, stride=1):
+    def __init__(self, kernel_size, initial=True, stride=1):
         super(SpatialWeightLayer, self).__init__()
         kernel_size = kernel_size
         self.spatial = nn.Conv2d(2, 1, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, dilation=1, groups=1, bias=False)
-        nn.init.constant_(self.spatial.weight, 0.)
-        nn.init.constant_(self.spatial.bias, 0.)
+        if initial:
+            nn.init.constant_(self.spatial.weight, 0.)
+        self.bn = nn.BatchNorm2d(out_planes,eps=1e-5, momentum=0.01, affine=True) 
         
     def forward(self, x):
         scale = torch.cat((torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)), dim=1) #channel pool
         scale = self.spatial(scale)
+        scale = self.bn(scale)
         scale = torch.sigmoid(scale)  # broadcasting
         return scale
