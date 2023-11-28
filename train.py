@@ -277,38 +277,13 @@ class Trainer():
 
 
             ##############################################
-            # if torch.isnan(final_den).any():
-            #     print("!!!!!!!!!!!!!!!!final den has nan!!!!!!!!!!!!!!!!!!!!")
-            #     self.epoch = self.cfg.MAX_EPOCH
-            #     break
-            # elif torch.isinf(final_den).any():
-            #     print("!!!!!!!!!!!!!!!!final den has inf!!!!!!!!!!!!!!!!!!!!")
-            #     self.epoch = self.cfg.MAX_EPOCH
-            #     break
-            # for scale in range(len(masks)):
-            #     if torch.isnan(masks[scale]).any():
-            #         print(f"!!!!!!!!!!!!!!!!mask {scale} has nan!!!!!!!!!!!!!!!!!!!!")
-            #         self.epoch = self.cfg.MAX_EPOCH
-            #         break
-            #     elif torch.isinf(masks[scale]).any():
-            #         print(f"!!!!!!!!!!!!!!!!mask {scale} has inf!!!!!!!!!!!!!!!!!!!!")
-            #         self.epoch = self.cfg.MAX_EPOCH
-            #         break
-            #     if torch.isnan(den_scales[scale]).any():
-            #         print(f"!!!!!!!!!!!!!!!!den {scale} has nan!!!!!!!!!!!!!!!!!!!!")
-            #         self.epoch = self.cfg.MAX_EPOCH
-            #         break
-            #     elif torch.isinf(den_scales[scale]).any():
-            #         print(f"!!!!!!!!!!!!!!!!den {scale} has inf!!!!!!!!!!!!!!!!!!!!")
-            #         self.epoch = self.cfg.MAX_EPOCH
-            #         break
+           
 
             
             kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
-            # warp_loss = self.net.deformable_alignment.warp_loss
             
             # all_loss = (kpi_loss + con_loss *cfg.con_alpha + 0*confidence_loss).sum()
             all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
