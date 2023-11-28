@@ -34,7 +34,7 @@ class MultiScaleFeatureFusion(nn.Module):
         # f = self.reduce_channel(f)
 
         return f
-    
+
 class OffsetFusion(nn.Module):
 
     def __init__(self, in_channel, scales_num=2, deformable_groups=4):
@@ -118,7 +118,7 @@ class OffsetFusion(nn.Module):
         
         
         return f
-    
+
 
 class OffsetFusion_2(nn.Module):
 
@@ -159,7 +159,7 @@ class OffsetFusion_2(nn.Module):
 
         
         return offset + residual
-    
+
 
 class OffsetFusion_3(nn.Module):
 
@@ -203,7 +203,7 @@ class OffsetFusion_3(nn.Module):
         return fs
 
 
-        
+
 
 class ChannelWeightLayer(nn.Module):
     def __init__(self,  in_channel):
@@ -219,8 +219,8 @@ class ChannelWeightLayer(nn.Module):
         b, c, _, _ = x.size()
         y = self.avg_pool(x).view(b, c)
         y = self.fc(y).view(b, c, 1, 1)
-        return x * y.expand_as(x)
-    
+        return y.expand_as(x)
+
 
 class SpatialWeightLayer(nn.Module):
     def __init__(self, kernel_size, stride=1):
@@ -232,4 +232,4 @@ class SpatialWeightLayer(nn.Module):
         scale = torch.cat((torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)), dim=1) #channel pool
         scale = self.spatial(scale)
         scale = torch.sigmoid(scale)  # broadcasting
-        return x * scale, scale
+        return scale
