@@ -257,7 +257,7 @@ class Trainer():
             # overall loss
 
             ############  gt confidence ################
-            gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
+#             gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
             # assert confidence.shape == gt_confidence.shape
             # bce_weight = torch.ones_like(gt_confidence)
             # bce_weight[torch.where(gt_confidence==-1)] = 0
@@ -313,7 +313,6 @@ class Trainer():
 
             # batch_loss['warp'].update(warp_loss.item())
 
-            self.train_record = update_model(self, None, val=False)
 
 
 
@@ -355,7 +354,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
@@ -369,7 +368,6 @@ class Trainer():
                 self.timer['val time'].toc(average=False)
                 print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
-            torch.cuda.empty_cache()
 
 
 
@@ -503,7 +501,6 @@ class Trainer():
 #                            
                 scenes_pred_dict.append(pred_dict)
                 scenes_gt_dict.append(gt_dict)
-                torch.cuda.empty_cache()
            
             MAE, MSE,WRAE, MIAE, MOAE, cnt_result =compute_metrics_all_scenes(scenes_pred_dict,scenes_gt_dict, 1)#cfg.VAL_INTERVALS)
             # print('MAE: %.2f, MSE: %.2f  WRAE: %.2f' % (MAE.data, MSE.data, WRAE.data))

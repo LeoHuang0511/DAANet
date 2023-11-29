@@ -246,7 +246,7 @@ class SMDCANet(nn.Module):
         return final_den, out_dens, in_dens, den_probs, io_probs
 # -
 
-
+    
 
 class SMDCAlignment(nn.Module):
 
