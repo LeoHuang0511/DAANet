@@ -26,8 +26,8 @@ class ComputeKPILoss(object):
         self.gt_generater = GenerateGT(cfg)
         
         self.focal_loss = FocalLoss(alpha=0.5, gamma=2)
-        # self.den_scale_weight = [1, 0.25,0.025]
-        self.den_scale_weight = [1, 1, 1]
+        self.den_scale_weight = [1, 0.25,0.025]
+#         self.den_scale_weight = [1, 1, 1]
         self.mask_scale_weight = [1, 1, 1]
 
 
@@ -111,7 +111,7 @@ class ComputeKPILoss(object):
         
 
 
-        loss = self.cnt_loss + 1*self.cnt_loss_scales.sum()+ self.mask_loss_scales.sum() + (self.in_loss + self.out_loss)
+        loss = self.cnt_loss + 10*self.cnt_loss_scales.sum()+ self.mask_loss_scales.sum() + (self.in_loss + self.out_loss)
         return loss
 
 
@@ -238,10 +238,10 @@ class ComputeKPILoss(object):
 
 
         return in_loss, out_loss
-    
-    
 
     
+
+
 class FocalLoss(nn.Module):
     def __init__(self,
                  alpha=0.25,
@@ -276,4 +276,4 @@ class FocalLoss(nn.Module):
         if self.reduction == 'sum':
             loss = loss.sum()
         return loss
-        
+
