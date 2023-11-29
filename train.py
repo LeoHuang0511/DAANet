@@ -694,7 +694,7 @@ if __name__=='__main__':
     parser.add_argument('--DATASET', type=str, default='HT21')
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
-    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=800)
+    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
 
 
 
