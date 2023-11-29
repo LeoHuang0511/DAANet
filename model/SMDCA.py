@@ -66,6 +66,9 @@ class SMDCANet(nn.Module):
             nn.Sigmoid(),
 
             ))
+            
+            nn.init.constant_(self.confidence_predict_layer[i][3].weight, 0.)
+            nn.init.constant_(self.confidence_predict_layer[i][3].bias, 0.)
         
 
     
