@@ -249,10 +249,10 @@ class ComputeKPILoss(object):
 
 
         return in_loss, out_loss
-    
-    
 
     
+
+
 class FocalLoss(nn.Module):
     def __init__(self,
                  alpha=0.25,
@@ -287,4 +287,4 @@ class FocalLoss(nn.Module):
         if self.reduction == 'sum':
             loss = loss.sum()
         return loss
-        
+

@@ -134,7 +134,7 @@ class VGG16_FPN(nn.Module):
 
 
         return f_mask, den_scale, f_den
-    
+
 
 
     
