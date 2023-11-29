@@ -257,7 +257,7 @@ class Trainer():
             # overall loss
 
             ############  gt confidence ################
-            # gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
+            gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
             # assert confidence.shape == gt_confidence.shape
             # bce_weight = torch.ones_like(gt_confidence)
             # bce_weight[torch.where(gt_confidence==-1)] = 0
@@ -277,13 +277,13 @@ class Trainer():
 
 
             ##############################################
-           
 
             
             kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
+            # warp_loss = self.net.deformable_alignment.warp_loss
             
             # all_loss = (kpi_loss + con_loss *cfg.con_alpha + 0*confidence_loss).sum()
             all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
@@ -308,13 +308,6 @@ class Trainer():
             batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
-            # print("self.compute_kpi_loss.cnt_loss",self.compute_kpi_loss.cnt_loss)
-            # print("self.compute_kpi_loss.in_loss",self.compute_kpi_loss.in_loss)
-            # print("self.compute_kpi_loss.out_loss",self.compute_kpi_loss.out_loss)
-            # print("self.compute_kpi_loss.mask_loss_scales",self.compute_kpi_loss.mask_loss_scales)
-            # print("self.compute_kpi_loss.cnt_loss_scales",self.compute_kpi_loss.cnt_loss_scales)
-            # print("con_loss", con_loss)
-
             # batch_loss['confidence'].update(confidence_loss.item())
 
 
@@ -362,7 +355,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
@@ -701,7 +694,7 @@ if __name__=='__main__':
     parser.add_argument('--DATASET', type=str, default='HT21')
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
-    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
+    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=800)
 
 
 
@@ -744,7 +737,6 @@ if __name__=='__main__':
 
     #_train
     parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-    parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
     parser.add_argument('--GRID_SIZE', type=int, default=8)
     parser.add_argument('--TRAIN_FRAME_INTERVALS', type=int, nargs='+', default=[40, 85])
     parser.add_argument('--TRAIN_BATCH_SIZE', type=int, default=2)

@@ -15,10 +15,10 @@ class ComputeKPILoss(object):
     def __init__(self, cfg, scale_num=3) -> None:
 
         self.cfg = cfg
-        # KPI_dict = {}
-        # for scale in range(scale_num):
-        #     KPI_dict[f"den{scale}"] =  ['gt_cnt', 'pre_cnt']
-        #     KPI_dict[f"mask{scale}"] =  ['gt_cnt', 'acc_cnt']
+        KPI_dict = {}
+        for scale in range(scale_num):
+            KPI_dict[f"den{scale}"] =  ['gt_cnt', 'pre_cnt']
+            KPI_dict[f"mask{scale}"] =  ['gt_cnt', 'acc_cnt']
 
 
         # self.task_KPI=Task_KPI_Pool(task_setting=KPI_dict, maximum_sample=1000)
@@ -44,8 +44,6 @@ class ComputeKPILoss(object):
 
         assert den.shape == gt_den_scales[0].shape
         self.cnt_loss = F.mse_loss(den*self.DEN_FACTOR, gt_den_scales[0] * self.DEN_FACTOR)
-        # print("cnt loss 0 nan", torch.isnan(F.mse_loss(den*self.DEN_FACTOR, gt_den_scales[0] * self.DEN_FACTOR,reduction = 'none')).any())
-        # print("cnt loss 0 ninfan", torch.isinf(F.mse_loss(den*self.DEN_FACTOR, gt_den_scales[0] * self.DEN_FACTOR,reduction = 'none')).any())
         self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
         self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
 
@@ -56,8 +54,7 @@ class ComputeKPILoss(object):
             # print(f"{scale} ",den_scales[scale].shape)
 
             self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * self.den_scale_weight[scale]
-            # print("cnt scale loss  nan", torch.isnan(F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR,reduction = 'none') * self.den_scale_weight[scale]).any())
-            # print("cnt scale loss inf", torch.isinf(F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR,reduction = 'none') * self.den_scale_weight[scale]).any())
+
 
              # # # mask loss
         
@@ -75,10 +72,7 @@ class ComputeKPILoss(object):
             self.mask_loss_scales[scale] += (F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")+ \
                                 F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")) * self.mask_scale_weight[scale]
 
-            # print("mask loss 0 nan", torch.isnan(F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean").any()))
-            # print("mask loss 0 inf", torch.isinf(F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean").any()))
-            # print("mask loss 0 nan", torch.isnan(  F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")))
-            # print("mask loss 0 inf", torch.isinf(  F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")))
+        
         # # # inflow/outflow loss
         self.in_loss, self.out_loss = self.compute_io_loss(pre_outflow_map, pre_inflow_map, gt_masks, gt_den_scales)
 
@@ -194,17 +188,12 @@ class ComputeKPILoss(object):
             numerator = exp_term[idx0, idx1]   #分子 numerator  c個重複  c個loss
 
             # loss =  torch.sum(-torch.log(numerator / denominator +1e-7))
-            loss =  -torch.log(numerator / denominator +1e-7)
+            loss =  torch.sum(-torch.log(numerator / denominator +1e-7)) 
         else:
             numerator = exp_term[idx0, idx1]   #分子 numerator  c個重複  c個loss
 
             # loss =  torch.sum(-torch.log(numerator / denominator +1e-7))
-            loss = -torch.log(numerator)
-
-        # print("con loss nan", torch.isnan(loss).any())
-        # print("con loss inf", torch.isinf(loss).any())
-        loss =  torch.sum(loss) 
-        
+            loss =  torch.sum(-torch.log(numerator)) 
 
 
         return loss
@@ -249,10 +238,10 @@ class ComputeKPILoss(object):
 
 
         return in_loss, out_loss
-
+    
     
 
-
+    
 class FocalLoss(nn.Module):
     def __init__(self,
                  alpha=0.25,
@@ -287,4 +276,4 @@ class FocalLoss(nn.Module):
         if self.reduction == 'sum':
             loss = loss.sum()
         return loss
-
+        

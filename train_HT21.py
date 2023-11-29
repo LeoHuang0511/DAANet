@@ -16,7 +16,6 @@ from misc.lr_scheduler import CosineAnnealingWarmupRestarts
 # from evaluation import metrics
 # from misc.layer import Gaussianlayer
 from misc.gt_generate import *
-import time
 
 
 
@@ -53,9 +52,6 @@ class Trainer():
 
         # self.net = video_crowd_count(cfg, cfg_data)
         self.net = SMDCANet(cfg, cfg_data).cuda()
-
-        self.cfg.flag = 0
-
 
 
         params = [
@@ -173,15 +169,12 @@ class Trainer():
 
     def forward(self):
         for epoch in range(self.epoch, self.cfg.MAX_EPOCH):
-            if self.cfg.flag == 1:
-                break
             self.epoch = epoch
             self.timer['train time'].tic()
             self.train()
             self.timer['train time'].toc(average=False)
             print( 'train time: {:.2f}s'.format(self.timer['train time'].diff) )
             print( '='*20 )
-            
 
         
     def train(self): # training for all datasets
@@ -198,10 +191,7 @@ class Trainer():
 
         loader = self.train_loader
 
-
         for i, data in enumerate(loader, 0):
-            
-
             self.timer['iter time'].tic()
             self.i_tb += 1
             img,target = data
@@ -221,23 +211,7 @@ class Trainer():
 
             
             img_pair_num = img.size(0)//2  
-            # print(self.i_tb)
-            # for b in range(img.shape[0]):
-            #     print(f"nan img {b}: ",torch.isnan(img[b]).any())
-            #     print(f"inf img {b}:",torch.isinf(img[b]).any())
-            #     if torch.isnan(img[b]).any() or torch.isinf(img[b]).any():
-            #         self.restore_transform(img[b]).save(f"{b}.jpg")
-            #         print("where nan: ",torch.where(torch.isnan(img[b])))
-            #         print("where inf: ",torch.where(torch.isinf(img[b])))
-
-
-            #         exit()
-            
-            
-
             den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
-            
-            
             
 
             pre_inf_cnt = []
@@ -255,15 +229,13 @@ class Trainer():
                 for key,data in target[b].items():
                     if torch.is_tensor(data):
                         target[b][key]=data.cuda()
-                        
-            
 
 
 
             gt_den_scales = self.generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
             
         
-            
+
 
 
             # gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
@@ -294,15 +266,11 @@ class Trainer():
                                                                             self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
-            
-            
             gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
-            
-            
             # overall loss
 
             ############  gt confidence ################
-            # gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
+            gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
             # assert confidence.shape == gt_confidence.shape
             # bce_weight = torch.ones_like(gt_confidence)
             # bce_weight[torch.where(gt_confidence==-1)] = 0
@@ -310,24 +278,22 @@ class Trainer():
 
 
             ############ generate final den and io flow ########
-            final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
+            final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'train')
             
             # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
             # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
             # in_den = torch.sum(in_den, dim=1).unsqueeze(1) / in_den.shape[1]
-            
+
 
 
 
 
             ##############################################
-            
 
-         
             
             kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
-            
+
 
             # warp_loss = self.net.deformable_alignment.warp_loss
             
@@ -346,16 +312,20 @@ class Trainer():
                 lr2 = self.optimizer.param_groups[1]['lr']
                 self.lr_scheduler_base.step(self.i_tb)
                 self.lr_scheduler_thre.step(self.i_tb)
-            
+
             # self.lr_scheduler.step()
-            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().detach().item())
-            batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().detach().item())
-            batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().detach().item())
-            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().detach().item())
-            batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().detach().item())
-            batch_loss['con'].update(con_loss.detach().item())
+            batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
+            batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
+            batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
+            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
+            batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
+            batch_loss['con'].update(con_loss.item())
             # batch_loss['confidence'].update(confidence_loss.item())
 
+
+            # batch_loss['warp'].update(warp_loss.item())
+
+            self.train_record = update_model(self, None, val=False)
 
 
 
@@ -397,7 +367,7 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
 
@@ -411,9 +381,7 @@ class Trainer():
                 self.timer['val time'].toc(average=False)
                 print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
-            
-            
-            
+            torch.cuda.empty_cache()
 
 
     def validate(self):
@@ -470,7 +438,7 @@ class Trainer():
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs ,_= self.net.scale_fuse(den_scales, masks, confidence, 'val')
+                        final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
@@ -698,7 +666,7 @@ if __name__=='__main__':
     parser.add_argument('--DATASET', type=str, default='HT21')
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
-    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
+    parser.add_argument('--SAVE_VIS_FREQ', type=int, default=800)
 
 
 
@@ -742,8 +710,6 @@ if __name__=='__main__':
 
     #_train
     parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-    parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
-
     parser.add_argument('--GRID_SIZE', type=int, default=8)
     parser.add_argument('--TRAIN_FRAME_INTERVALS', type=int, nargs='+', default=[40, 85])
     parser.add_argument('--TRAIN_BATCH_SIZE', type=int, default=2)

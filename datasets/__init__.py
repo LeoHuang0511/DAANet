@@ -24,9 +24,8 @@ class train_pair_transform(object):
         self.last_cw_ch =(0,0)
         self.crop_left = (0,0)
         self.last_crop_left = (0, 0)
-        # self.rate_range = (0.8,1.2)
-        self.rate_range = (0.8,0.81)
-
+        self.rate_range = (0.8,1.2)
+        # self.rate_range = (1.0,1.4)
 
         self.resize_and_crop= own_transforms.RandomCrop( cfg_data.TRAIN_SIZE)
         self.scale_to_setting = own_transforms.ScaleByRateWithMin(cfg_data.TRAIN_SIZE[1], cfg_data.TRAIN_SIZE[0])
@@ -111,8 +110,6 @@ def createTrainData(datasetname, Dataset, cfg, cfg_data):
     ])
 
     main_transform = train_pair_transform(cfg)
-    # main_transform = None
-
     
     train_set =Dataset(cfg_data.TRAIN_LST,
                                     cfg_data.DATA_PATH,

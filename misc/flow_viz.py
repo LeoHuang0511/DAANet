@@ -227,18 +227,6 @@ def compute_color(u, v):
         # print(k0)
         # print(k1)
 
-        try:
-            col0 = tmp[k0 - 1] / 255
-            col1 = tmp[k1 - 1] / 255
-        except:
-            print(tmp)
-            print(k0)
-            print(k1)
-            print(u.max())
-            print(u.min())
-            print(v.max())
-            print(v.min())
-
         col0 = tmp[k0 - 1] / 255
         col1 = tmp[k1 - 1] / 255
         col = (1 - f) * col0 + f * col1
