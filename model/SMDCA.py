@@ -63,6 +63,7 @@ class SMDCANet(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0),
+            nn.Sigmoid(),
 
             ))
         
@@ -72,6 +73,7 @@ class SMDCANet(nn.Module):
 
 #         
 
+# +
 
     
 
@@ -93,8 +95,8 @@ class SMDCANet(nn.Module):
             feature1.append(feature[scale][0::2,:,:,:])
             feature2.append(feature[scale][1::2,:,:,:])
 
-            feature_den1.append(feature_den[scale][0::2,:,:,:])
-            feature_den2.append(feature_den[scale][1::2,:,:,:])
+#             feature_den1.append(feature_den[scale][0::2,:,:,:])
+#             feature_den2.append(feature_den[scale][1::2,:,:,:])
 
         
 
@@ -122,10 +124,12 @@ class SMDCANet(nn.Module):
             mask = self.mask_predict_layer[scale](f)
 
             # confidence = self.confidence_predict_layer[scale](f)
-            f_den = torch.cat([feature_den1[scale],  feature_den2[scale]],dim=0)
-            confidence = self.confidence_predict_layer[scale](f_den)
+#             f_den = torch.cat([feature_den1[scale],  feature_den2[scale]],dim=0)
+#             confidence = self.confidence_predict_layer[scale](f_den)
+            confidence = self.confidence_predict_layer[scale](feature_den[scale])
 
-            confidence = F.sigmoid(confidence)
+
+#             confidence = F.sigmoid(confidence)
             confidence = F.upsample_nearest(confidence, scale_factor=2**(scale))
             
             # f = torch.sigmoid(f)
@@ -225,16 +229,22 @@ class SMDCANet(nn.Module):
             conf_mask = torch.softmax(confidence,dim=1)
 
 
-        final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
+#         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
 
-        final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-        final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+#         final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+#         final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+        final_den = torch.sum(dens * conf_mask, dim=1).unsqueeze(1)
 
 
-        out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-        in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+
+#         out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+#         in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+        
+        out_dens = torch.sum(out_dens * conf_mask[0::2,:,:,:], dim=1).unsqueeze(1)
+        in_dens = torch.sum(in_dens * conf_mask[1::2,:,:,:], dim=1).unsqueeze(1)
 
         return final_den, out_dens, in_dens, den_probs, io_probs
+# -
 
     
 
