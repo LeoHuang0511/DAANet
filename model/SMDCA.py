@@ -218,18 +218,20 @@ class SMDCANet(nn.Module):
 
 
         # if mode == "train" or mode == 'val':
-        if mode == "train":
+#         if mode == "train":
 
-            conf_mask = torch.zeros_like(confidence).cuda()
-            confidence = torch.softmax(confidence,dim=1)
-            for scale in range(conf_mask.shape[1]):
-        #         # try:
-                conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
-        #         # except:
-        #         #     print(conf_mask[:,scale])
-        #         #     break
-        else:
-            conf_mask = torch.softmax(confidence,dim=1)
+#             conf_mask = torch.zeros_like(confidence).cuda()
+#             confidence = torch.softmax(confidence,dim=1)
+#             for scale in range(conf_mask.shape[1]):
+#         #         # try:
+#                 conf_mask[:,scale][torch.where(torch.argmax(confidence,dim=1).squeeze()==scale)] = 1
+#         #         # except:
+#         #         #     print(conf_mask[:,scale])
+#         #         #     break
+#         else:
+#             conf_mask = torch.softmax(confidence,dim=1)
+        conf_mask = torch.softmax(confidence,dim=1)
+        
 
 
 #         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
