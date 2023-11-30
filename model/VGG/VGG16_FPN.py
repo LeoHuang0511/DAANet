@@ -36,14 +36,17 @@ class VGG16_FPN(nn.Module):
 
         
 
+        self.scale_loc_bottleneck = nn.ModuleList()
         self.scale_loc_head = nn.ModuleList()
+        
         for i in range(len(in_channels)):
-            self.scale_loc_head.append(nn.Sequential(
+            self.scale_loc_bottleneck.append(nn.Sequential(
                                 nn.Dropout2d(0.2),
                              
                                 ResBlock(in_dim=192, out_dim=128, dilation=0, norm="bn"),
                                 ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
-
+            ))
+            self.scale_loc_head.append(nn.Sequential(
 
 
                                 nn.ConvTranspose2d(128, 64, 2, stride=2, padding=0, output_padding=0, bias=False),
@@ -91,6 +94,7 @@ class VGG16_FPN(nn.Module):
         den_scale = []
         for scale in range(len(f_den)):
             
+            f_den[scale] = self.scale_loc_bottleneck[scale](f_den[scale])
             den_scale.append(self.scale_loc_head[scale](f_den[scale]))
       
 
