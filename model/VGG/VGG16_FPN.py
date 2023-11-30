@@ -12,6 +12,7 @@ from model.attention import MultiScaleFeatureFusion
 BatchNorm2d = nn.BatchNorm2d
 BN_MOMENTUM = 0.01
 
+# +
 class VGG16_FPN(nn.Module):
     def __init__(self,cfg):
         super(VGG16_FPN, self).__init__()
@@ -46,24 +47,42 @@ class VGG16_FPN(nn.Module):
                                 ResBlock(in_dim=192, out_dim=128, dilation=0, norm="bn"),
                                 ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
             ))
-            self.scale_loc_head.append(nn.Sequential(
+#             self.scale_loc_head.append(nn.Sequential(
 
 
-                                nn.ConvTranspose2d(128, 64, 2, stride=2, padding=0, output_padding=0, bias=False),
-                                nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
-                                nn.ReLU(inplace=True),
+#                                 nn.ConvTranspose2d(128, 64, 2, stride=2, padding=0, output_padding=0, bias=False),
+#                                 nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+#                                 nn.ReLU(inplace=True),
 
-                                nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
-                                nn.BatchNorm2d(32, momentum=BN_MOMENTUM),
-                                nn.ReLU(inplace=True),
+#                                 nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
+#                                 nn.BatchNorm2d(32, momentum=BN_MOMENTUM),
+#                                 nn.ReLU(inplace=True),
 
-                                nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
-                                nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
-                                nn.ReLU(inplace=True),
+#                                 nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
+#                                 nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
+#                                 nn.ReLU(inplace=True),
 
-                                nn.Conv2d(16, 1, kernel_size=1, stride=1, padding=0),
-                                nn.ReLU(inplace=True)
-                            ))
+#                                 nn.Conv2d(16, 1, kernel_size=1, stride=1, padding=0),
+#                                 nn.ReLU(inplace=True)
+#                             ))
+        self.loc_head=nn.Sequential(
+
+                    nn.ConvTranspose2d(128, 64, 2, stride=2, padding=0, output_padding=0, bias=False),
+                    nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+                    nn.ReLU(inplace=True),
+
+                    nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(32, momentum=BN_MOMENTUM),
+                    nn.ReLU(inplace=True),
+
+                    nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
+                    nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
+                    nn.ReLU(inplace=True),
+
+                    nn.Conv2d(16, 1, kernel_size=1, stride=1, padding=0),
+                    nn.ReLU(inplace=True)
+                )
+            
             
         self.feature_head = nn.ModuleList()
         for i in range(len(in_channels)):
@@ -95,7 +114,9 @@ class VGG16_FPN(nn.Module):
         for scale in range(len(f_den)):
             
             f_den[scale] = self.scale_loc_bottleneck[scale](f_den[scale])
-            den_scale.append(self.scale_loc_head[scale](f_den[scale]))
+#             den_scale.append(self.scale_loc_head[scale](f_den[scale]))
+            den_scale.append(self.loc_head(f_den[scale]))
+
       
 
 
@@ -106,6 +127,7 @@ class VGG16_FPN(nn.Module):
 
 
         return f_mask, den_scale, f_den
+# -
 
 
 

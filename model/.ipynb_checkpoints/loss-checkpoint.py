@@ -27,7 +27,7 @@ class ComputeKPILoss(object):
         self.gt_generater = GenerateGT(cfg)
         
         self.focal_loss = FocalLoss(alpha=0.5, gamma=2)
-        self.den_scale_weight = [5, 0.1,0.01]
+        self.den_scale_weight = [2, 0.1,0.01]
 #         self.den_scale_weight = [1, 1, 1]
         self.mask_scale_weight = [1, 1, 1]
 
@@ -58,7 +58,6 @@ class ComputeKPILoss(object):
             # print(f"{scale} ",den_scales[scale].shape)
 
             self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * self.den_scale_weight[scale]
-
 
              # # # mask loss
         
