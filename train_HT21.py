@@ -58,7 +58,7 @@ class Trainer():
             {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
         ]
         
         # self.optimizer = optim.Adam(params)
@@ -158,7 +158,7 @@ class Trainer():
         self.timer={'iter time': Timer(), 'train time': Timer(), 'val time': Timer()}
         self.num_iters = self.cfg.MAX_EPOCH * np.int64(len(self.train_loader))
         # self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
-        self.compute_kpi_loss = ComputeKPILoss(cfg)
+        self.compute_kpi_loss = ComputeKPILoss(self, cfg)
 
         self.generate_gt = GenerateGT(cfg)
         self.feature_scale = cfg.feature_scale
@@ -278,7 +278,7 @@ class Trainer():
 
 
             ############ generate final den and io flow ########
-            final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'train')
+            final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
             
             # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
             # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
@@ -339,6 +339,8 @@ class Trainer():
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
                 self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
+                self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight, self.i_tb)
+
 
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
                 self.writer.add_scalar('thre_lr', lr2, self.i_tb)
@@ -435,7 +437,7 @@ class Trainer():
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs = self.net.scale_fuse(den_scales, masks, confidence, 'val')
+                        final_den, out_den, in_den, den_probs, io_probs, _ = self.net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
@@ -714,6 +716,8 @@ if __name__=='__main__':
     parser.add_argument('--feature_scale', type=float, default=1/4.)
     parser.add_argument('--target_ratio', type=float, default=2)
     parser.add_argument('--gaussian_sigma', type=float, default=4)
+    parser.add_argument('--Dynamic_freq', type=int, default=1000)
+    
 
 
 

@@ -83,7 +83,7 @@ class SMDCANet(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.Conv2d(32, 3, kernel_size=1, stride=1, padding=0),
-            nn.Sigmoid(),
+#             nn.Sigmoid(),
             
             
         )
@@ -240,7 +240,7 @@ class SMDCANet(nn.Module):
         out_dens = torch.sum(out_dens * conf_mask[0::2,:,:,:], dim=1).unsqueeze(1)
         in_dens = torch.sum(in_dens * conf_mask[1::2,:,:,:], dim=1).unsqueeze(1)
 
-        return final_den, out_dens, in_dens, den_probs, io_probs
+        return final_den, out_dens, in_dens, den_probs, io_probs, conf_mask
 # -
 
 
