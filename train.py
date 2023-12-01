@@ -744,7 +744,9 @@ if __name__=='__main__':
     parser.add_argument('--feature_scale', type=float, default=1/4.)
     parser.add_argument('--target_ratio', type=float, default=2)
     parser.add_argument('--gaussian_sigma', type=float, default=4)
-    parser.add_argument('--Dynamic_freq', type=int, default=1000)
+    parser.add_argument('--Dynamic_freq', type=int, default=1)
+    parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+
 
 
 

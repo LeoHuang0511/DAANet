@@ -11,6 +11,7 @@ import cv2
 
 
 
+# +
 class ComputeKPILoss(object):
     def __init__(self, trainer, cfg, scale_num=3) -> None:
 
@@ -30,6 +31,8 @@ class ComputeKPILoss(object):
         self.den_scale_weight = [2, 0.1,0.01]
 #         self.den_scale_weight = [1, 1, 1]
         self.mask_scale_weight = [1, 1, 1]
+        self.io_scale_weight = [2, 1,0.5]
+    
 
 
         self.mask_class_weight = torch.Tensor([1,1,1]).cuda()
@@ -50,6 +53,9 @@ class ComputeKPILoss(object):
         self.cnt_loss = F.mse_loss(den*self.DEN_FACTOR, gt_den_scales[0] * self.DEN_FACTOR)
         self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
         self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
+        self.out_loss_scales = torch.zeros(len(den_scales)).cuda()
+        self.in_loss_scales = torch.zeros(len(den_scales)).cuda()
+        
 
 
         for scale in range(len(den_scales)):
@@ -76,7 +82,25 @@ class ComputeKPILoss(object):
                                 F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")) * self.mask_scale_weight[scale]
 
         
+            # # # inflow/outflow scale loss
+            pre_out_map_scale = den_scales[scale][0::2,:,:,:] * masks[scale][:img_pair_num,1:2,:,:]
+            pre_in_map_scale = den_scales[scale][1::2,:,:,:] * masks[scale][img_pair_num:,1:2,:,:]
+        
+        
+            gt_outflow_map_scale = (gt_masks[scale][:,0:1,:,:] == 1) * gt_den_scales[scale][0::2,:,:,:] 
+            gt_inflow_map_scale = (gt_masks[scale][:,1:2,:,:] == 1) * gt_den_scales[scale][1::2,:,:,:]
+            
+            
+            assert pre_out_map_scale.shape == gt_outflow_map_scale.shape
+            assert pre_in_map_scale.shape == gt_inflow_map_scale.shape
+            
+            
+            self.out_loss_scales[scale] += F.mse_loss(pre_out_map_scale, gt_outflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
+            self.in_loss_scales[scale] += F.mse_loss(pre_in_map_scale, gt_inflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
+            
+            
         # # # inflow/outflow loss
+        
         self.in_loss, self.out_loss = self.compute_io_loss(pre_outflow_map, pre_inflow_map, gt_masks, gt_den_scales)
 
 
@@ -112,16 +136,17 @@ class ComputeKPILoss(object):
 
         # return weight*loss
         
-        scale_loss = 10*self.cnt_loss_scales.sum()+ self.mask_loss_scales.sum()
+        scale_loss = 10*self.cnt_loss_scales.sum()+ self.out_loss_scales.sum() + self.in_loss_scales.sum()
         
-        if self.trainer.i_tb == 1:
+        if self.trainer.i_tb == self.cfg.Dynamic_freq:
             self.init_scale_loss = scale_loss.item()
             
-        if self.trainer.i_tb % self.cfg.Dynamic_freq == 0:
+#         if self.trainer.i_tb % self.cfg.Dynamic_freq == 0:
+        if (self.trainer.i_tb >= self.cfg.Dynamic_freq) and (self.trainer.i_tb % self.cfg.Dynamic_freq == 0):
             self.dynamic_weight = (self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16)
             
 
-        loss = scale_loss + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
+        loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
         return loss
 
 
@@ -214,6 +239,8 @@ class ComputeKPILoss(object):
 
     
         img_pair_num = gt_dens[0].shape[0]//2
+        
+        
         gt_outflow_map = (gt_masks[0][:,0:1,:,:] == 1) * gt_dens[0][0::2,:,:,:] 
         gt_inflow_map = (gt_masks[0][:,1:2,:,:] == 1) * gt_dens[0][1::2,:,:,:] 
 
@@ -248,8 +275,9 @@ class ComputeKPILoss(object):
 
 
         return in_loss, out_loss
+# -
 
-    
+
 
 
 class FocalLoss(nn.Module):

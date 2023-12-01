@@ -250,7 +250,7 @@ class ShiftPretrainDataset(data.Dataset):
             shift_img2 = self.img_transforms(shift_img2)
 
         return  torch.cat([shift_img1[None,:], shift_img2[None,:]],dim=0), [shift_target1, shift_target2]
-    
+
 
 
 def CARLA_ImgPath_and_Target(base_path,i):
