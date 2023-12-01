@@ -83,8 +83,9 @@ class ComputeKPILoss(object):
 
         
             # # # inflow/outflow scale loss
-            pre_out_map_scale = den_scales[scale][0::2,:,:,:] * masks[scale][:img_pair_num,1:2,:,:]
-            pre_in_map_scale = den_scales[scale][1::2,:,:,:] * masks[scale][img_pair_num:,1:2,:,:]
+            mask_prob = F.softmax(masks[scale], dim=1)
+            pre_out_map_scale = den_scales[scale][0::2,:,:,:] * mask_prob[:img_pair_num,1:2,:,:]
+            pre_in_map_scale = den_scales[scale][1::2,:,:,:] * mask_prob[img_pair_num:,1:2,:,:]
         
         
             gt_outflow_map_scale = (gt_masks[scale][:,0:1,:,:] == 1) * gt_den_scales[scale][0::2,:,:,:] 
