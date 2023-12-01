@@ -81,6 +81,7 @@ opt.TRAIN_BATCH_SIZE = opt.VAL_BATCH_SIZE
 opt.mode = 'test'
 
 
+# +
 def test(cfg, cfg_data):
 
     print("model_path: ",cfg.model_path)
@@ -160,7 +161,7 @@ def test(cfg, cfg_data):
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs = net.scale_fuse(den_scales, masks, confidence, 'val')
+                        final_den, out_den, in_den, den_probs, io_probs,_ = net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
@@ -204,10 +205,15 @@ def test(cfg, cfg_data):
                                 
 
 
+#                                 save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform, 0, 
+#                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+#                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+#                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+#                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
                                 save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(), (gt_confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(gt_confidence[img.size(0)//2,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
 
     #                    
@@ -228,11 +234,12 @@ def test(cfg, cfg_data):
         
         print(final_result)
         save_test_logger(cfg, cfg.output_dir, crowdflow_cnt, final_result)
-        
+# -
+
 
 
             
- 
+
 
 
 if __name__=='__main__':
