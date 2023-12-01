@@ -162,7 +162,7 @@ def test(cfg, cfg_data):
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs,_ = net.scale_fuse(den_scales, masks, confidence, 'val')
+                        final_den, out_den, in_den, den_probs, io_probs, confidence = net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
