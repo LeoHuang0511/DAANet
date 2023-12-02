@@ -7,6 +7,8 @@ from misc.gt_generate import GenerateGT
 import numpy as np
 import PIL.Image as Image
 import cv2
+from misc.utils import *
+
 
 
 
@@ -37,7 +39,7 @@ class ComputeKPILoss(object):
 
         self.mask_class_weight = torch.Tensor([1,1,1]).cuda()
         
-        self.dynamic_weight = 0
+        self.dynamic_weight = AverageMeter()
         
         
 
@@ -139,15 +141,22 @@ class ComputeKPILoss(object):
         
         scale_loss = 10*self.cnt_loss_scales.sum()+ self.out_loss_scales.sum() + self.in_loss_scales.sum()
         
-        if self.trainer.i_tb == self.cfg.Dynamic_freq:
+#         if self.trainer.i_tb == self.cfg.Dynamic_freq:
+#             self.init_scale_loss = scale_loss.item()
+            
+# #         if self.trainer.i_tb % self.cfg.Dynamic_freq == 0:
+#         if (self.trainer.i_tb >= self.cfg.Dynamic_freq) and (self.trainer.i_tb % self.cfg.Dynamic_freq == 0):
+#             self.dynamic_weight = (self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16)
+        
+        if self.trainer.i_tb == 1:
             self.init_scale_loss = scale_loss.item()
             
-#         if self.trainer.i_tb % self.cfg.Dynamic_freq == 0:
-        if (self.trainer.i_tb >= self.cfg.Dynamic_freq) and (self.trainer.i_tb % self.cfg.Dynamic_freq == 0):
-            self.dynamic_weight = (self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16)
+        self.dynamic_weight.update((self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16))
             
 
-        loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
+#         loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
+        loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight.avg * (self.cnt_loss + (self.in_loss + self.out_loss))
+        
         return loss
 
 

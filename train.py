@@ -327,7 +327,7 @@ class Trainer():
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
                 self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
-                self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight, self.i_tb)
+                self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight.avg, self.i_tb)
 
 
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
@@ -744,7 +744,7 @@ if __name__=='__main__':
     parser.add_argument('--feature_scale', type=float, default=1/4.)
     parser.add_argument('--target_ratio', type=float, default=2)
     parser.add_argument('--gaussian_sigma', type=float, default=4)
-    parser.add_argument('--Dynamic_freq', type=int, default=1)
+    parser.add_argument('--Dynamic_freq', type=int, default=2000)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
 
 

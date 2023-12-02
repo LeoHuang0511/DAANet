@@ -59,6 +59,8 @@ class Trainer():
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.mask_bottleneck.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
+            
         ]
         
         # self.optimizer = optim.Adam(params)
@@ -187,7 +189,7 @@ class Trainer():
                                     self.cfg.LR_Thre,
                                     self.cfg.LR_DECAY)
 
-        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'confidence':AverageMeter()}
+        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'scale_io':AverageMeter()}
 
         loader = self.train_loader
 
@@ -319,6 +321,9 @@ class Trainer():
             batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
             batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
+            batch_loss['scale_io'].update((self.compute_kpi_loss.out_loss_scales.sum() \
+                                           +self.compute_kpi_loss.in_loss_scales.sum()).item())
+            
             batch_loss['con'].update(con_loss.item())
             # batch_loss['confidence'].update(confidence_loss.item())
 
@@ -338,8 +343,9 @@ class Trainer():
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
-                self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
-                self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight, self.i_tb)
+#                 self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
+                self.writer.add_scalar('loss_io_scale', batch_loss['scale_io'].avg, self.i_tb)
+                self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight.avg, self.i_tb)
 
 
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
@@ -351,8 +357,8 @@ class Trainer():
 
                 self.timer['iter time'].toc(average=False)
                
-                print('[ep %d][it %d][loss_den %.4f][loss_den %.4f][loss_mask %.4f][loss_conf %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['confidence'].avg, batch_loss['in'].avg,
+                print('[ep %d][it %d][loss_den %.4f][loss_den %.4f][loss_mask %.4f][loss_io %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['scale_io'].avg, batch_loss['in'].avg,
                         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
                 
 
@@ -716,7 +722,10 @@ if __name__=='__main__':
     parser.add_argument('--feature_scale', type=float, default=1/4.)
     parser.add_argument('--target_ratio', type=float, default=2)
     parser.add_argument('--gaussian_sigma', type=float, default=4)
-    parser.add_argument('--Dynamic_freq', type=int, default=1000)
+    parser.add_argument('--Dynamic_freq', type=int, default=2000)
+    parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+    
+    
     
 
 
