@@ -87,10 +87,12 @@ class GenerateGT():
             # maskgt[:,2,:,:] *= 2.
 
             seggt = torch.zeros((maskgt.shape[0],2,maskgt.shape[2],maskgt.shape[3])).cuda()
-            seggt[:,0,:,:] = maskgt[:,0,:,:] 
             seggt[:,0,:,:][maskgt[:,2,:,:].bool()] = 2
-            seggt[:,1,:,:] = maskgt[:,1,:,:]
+            seggt[:,0,:,:] = [maskgt[:,0,:,:].bool()] = 1 
+            
             seggt[:,1,:,:][maskgt[:,3,:,:].bool()] = 2
+            seggt[:,1,:,:] = [maskgt[:,1,:,:].bool()] = 1
+            
 
             
 
