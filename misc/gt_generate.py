@@ -31,7 +31,7 @@ class GenerateGT():
             for i in range(gt_den.shape[0]):
                 # multi-scale density gt
                 gt_den_np = gt_den[i].detach().cpu().numpy().squeeze().copy()
-                den = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/(2**scale)),int(gt_den_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* ((2*scale)**2)
+                den = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/(2**scale)),int(gt_den_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* ((2**scale)**2)
                 
                 
                 if i == 0:
@@ -75,7 +75,7 @@ class GenerateGT():
                 if scale == 0:
                     mask = gt_mask_np
                 else:
-                    mask = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/(2**scale)),int(gt_mask_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* * ((2*scale)**2)
+                    mask = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/(2**scale)),int(gt_mask_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* ((2**scale)**2)
                 
                 if i == 0:
                     maskgt = np.expand_dims(mask,0)
