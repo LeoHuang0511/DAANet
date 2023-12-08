@@ -756,9 +756,8 @@ if __name__=='__main__':
     
     cfg.mode = 'train'
 
-    if cfg.DATASET == "SENSE":
-        cfg.MEAN_STD = ([0.5037, 0.5132, 0.5140], [0.2257, 0.0302, 0.0414])
-        cfg.TRAIN_FRAME_INTERVALS = [5,12]
+    assert cfg.DATASET == "HT21":
+        
 
     cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2
 
