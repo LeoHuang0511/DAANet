@@ -303,9 +303,9 @@ def test(cfg, cfg_data):
 
                 print('='*20, key, '='*20)
                 
-                print('DEN_MAE: %.2f, DEN_MSE: %.2f, MAE: %.2f, MSE: %.2f  WRAE: %.2f WIAE: %.2f WOAE: %.2f' % (mae, mse, MAE.data, MSE.data, WRAE.data, MIAE.data, MOAE.data))
+                print('DEN_MAE: %.2f, DEN_MSE: %.2f, MAE: %.2f, MSE: %.2f  WRAE: %.2f MIAE: %.2f MOAE: %.2f' % (mae, mse, MAE.data, MSE.data, WRAE.data, MIAE.data, MOAE.data))
                 f.write(f"{'='*20} {key} {'='*20}\n")
-                f.write(f"DEN_MAE {mae}, DEN_MSE {mse}, MAE {MAE.data}, MSE {MSE.data}, WRAE {WRAE.data}\n")
+                f.write(f"DEN_MAE {mae}, DEN_MSE {mse}, MAE {MAE.data}, MSE {MSE.data}, WRAE {WRAE.data}, MIAE {MIAE.data}, MOAE {MOAE.data}\n")
                 if key == 'all':
                     save_cnt_result = cnt_result
                     np.save(os.path.join(dir + '/SENSE_cnt.py'),save_cnt_result.numpy())
