@@ -39,7 +39,7 @@ parser.add_argument(
     '--skip_flag', type=bool, default=False,
     help='if you need to caculate the MIAE and MOAE, it should be False')
 parser.add_argument(
-    '--save_freq', type=int, default=2,
+    '--save_freq', type=int, default=20,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,
@@ -56,8 +56,11 @@ parser.add_argument('--feature_scale', type=float, default=1/4.)
 
 
 parser.add_argument('--DEN_FACTOR', type=float, default=200.)
-parser.add_argument('--MEAN_STD', type=tuple, default=([0.3467, 0.5197, 0.4980], [0.2125, 0.0232, 0.0410]))
+parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
 parser.add_argument('--ROI_RADIUS', type=float, default=4.)
+parser.add_argument('--gaussian_sigma', type=float, default=4)
+parser.add_argument('--Dynamic_freq', type=int, default=2000)
+parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
 
 
 parser.add_argument(
@@ -100,7 +103,7 @@ def test(cfg, cfg_data):
         net.cuda()
         net.eval()
 
-        generate_gt = GenerateGT(cfg).cuda()
+        generate_gt = GenerateGT(cfg)
         get_roi_and_matchinfo = get_ROI_and_MatchInfo( cfg.TRAIN_SIZE, cfg.ROI_RADIUS, feature_scale=cfg.feature_scale)
 
 
@@ -134,10 +137,7 @@ def test(cfg, cfg_data):
                 img,target = img[0],target[0]
                 scene_name = target[0]['scene_name']
                 img = torch.stack(img, 0).cuda()
-                for i in range(len(target)):
-                        for key,data in target[i].items():
-                            if torch.is_tensor(data):
-                                target[i][key]=data.cuda()
+                
                 if cfg.task == 'SP':
                     print("Testing code isn't completed")
                     break
@@ -162,29 +162,48 @@ def test(cfg, cfg_data):
 
                     if frame_signal == 'match' or not cfg.skip_flag:
 
-                        pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, _, _,attn_1, attn_2 = net(img)
+                        # pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, _, _,attn_1, attn_2 = net(img)
+                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
 
+                        pred_map, out_den, in_den, den_probs, io_probs, confidence = net.scale_fuse(den_scales, masks, confidence, 'val')
                         pre_inflow, pre_outflow = \
-                            pre_inflow_map.sum().detach().cpu(), pre_outflow_map.sum().detach().cpu()
+                            in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
                         # save_inflow_outflow_density(img, matched_results['scores'], matched_results['pre_points'],
                         #                             matched_results['target'], matched_results['match_gt'],
                         #                             osp.join(cfg.output_dir, scene_name), scene_name, vi, cfg.test_intervals)
 
-                        #    -----------gt generate metric computation------------------
-                        gt_den = generate_gt.get_den(pred_map.shape, target)
+                        target_ratio = pred_map.shape[2]/img.shape[2]
 
-                        gt_mask = torch.zeros(img_pair_num, 2, pred_map.size(2), pred_map.size(3)).cuda()
+                        for b in range(len(target)):
+                            target[b]["points"] = target[b]["points"] * target_ratio
+                            target[b]["sigma"] = target[b]["sigma"] * target_ratio
+                            
+                            for key,data in target[b].items():
+                                if torch.is_tensor(data):
+                                    target[b][key]=data.cuda()
+                        #    -----------gt generate metric computation------------------
+                         
+                        gt_den_scales = generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
+                        gt_den = gt_den_scales[0]
+                        
                         assert pred_map.size() == gt_den.size()
+
+                        gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+
                         gt_in_cnt = torch.zeros(img_pair_num).detach()
                         gt_out_cnt = torch.zeros(img_pair_num).detach()
+
+                        assert pred_map.size() == gt_den.size()
+
                         for pair_idx in range(img_pair_num):
                             count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                             
                             if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                                 match_gt, _ = get_roi_and_matchinfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                                _, gt_in_cnt, gt_out_cnt \
-                                    = generate_gt.get_io_mask(pair_idx, target, match_gt, gt_mask, gt_out_cnt, gt_in_cnt)
+                                gt_io_map, gt_in_cnt, gt_out_cnt \
+                                    = generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
+                        gt_mask_scales = generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
 
                          #    -----------Counting performance------------------
                         gt_count, pred_cnt = gt_den[0].sum().item(),  pred_map[0].sum().item()
@@ -218,14 +237,18 @@ def test(cfg, cfg_data):
                         img_pair_idx+=1
             
                         if img_pair_idx % cfg.save_freq == 0:
-                            save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform,\
-                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), pred_map[0].detach().cpu().numpy() , \
-                                    torch.ones_like(pred_map[0]).detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(), torch.ones_like( pred_map[1]).detach().cpu().numpy(),\
-                                    pre_mask[0,:,:,:].detach().cpu().numpy(), torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                                    pre_mask[img.size(0)//2,:,:,:].detach().cpu().numpy(),torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                                    f_flow[0].permute(1,2,0).detach().cpu().numpy(),b_flow[0].permute(1,2,0).detach().cpu().numpy(),\
-                                    attn_1[0].detach().cpu().numpy(), attn_2[0].detach().cpu().numpy())
-
+                            # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform,\
+                            #         img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), pred_map[0].detach().cpu().numpy() , \
+                            #         torch.ones_like(pred_map[0]).detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(), torch.ones_like( pred_map[1]).detach().cpu().numpy(),\
+                            #         pre_mask[0,:,:,:].detach().cpu().numpy(), torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
+                            #         pre_mask[img.size(0)//2,:,:,:].detach().cpu().numpy(),torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
+                            #         f_flow[0].permute(1,2,0).detach().cpu().numpy(),b_flow[0].permute(1,2,0).detach().cpu().numpy(),\
+                            #         attn_1[0].detach().cpu().numpy(), attn_2[0].detach().cpu().numpy())
+                            save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals),restore_transform, 0, 
+                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                    pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
     #                     kpts0 = matched_results['pre_points'][0][:, 2:4].cpu().numpy()
     #                     kpts1 = matched_results['pre_points'][1][:, 2:4].cpu().numpy()
 
