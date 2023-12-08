@@ -59,7 +59,7 @@ class Trainer():
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.mask_bottleneck.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
+#             {"params": self.net.mask_bottleneck.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             
         ]
         
