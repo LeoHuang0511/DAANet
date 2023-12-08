@@ -74,7 +74,7 @@ class Trainer():
                                                 'out_mae':1e20, 'out_mse':1e20}
 
         elif cfg.task == "FT":
-            self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
+            self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
         
         
         if self.cfg.RESUME:
@@ -518,9 +518,9 @@ class Trainer():
             self.writer.add_scalar('MOAE', MOAE, self.i_tb)
 
 
-            self.train_record = update_model(self,{'mae':mae, 'mse':mse, 'seq_MAE':MAE, 'WRAE':WRAE, 'MIAE': MIAE, 'MOAE': MOAE },val=True)
+            self.train_record = update_model(self,{'mae':mae, 'mse':mse, 'seq_MAE':MAE, 'seq_MSE':MSE, 'WRAE':WRAE, 'MIAE': MIAE, 'MOAE': MOAE },val=True)
 
-            print_NWPU_summary_det(self,{'mae':mae, 'mse':mse, 'seq_MAE':MAE, 'WRAE':WRAE, 'MIAE': MIAE, 'MOAE': MOAE})
+            print_NWPU_summary_det(self,{'mae':mae, 'mse':mse, 'seq_MAE':MAE, 'seq_MSE':MSE, 'WRAE':WRAE, 'MIAE': MIAE, 'MOAE': MOAE})
             
 
 
