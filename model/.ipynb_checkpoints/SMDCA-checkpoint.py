@@ -52,14 +52,20 @@ class SMDCANet(nn.Module):
 
 #             ))
 
-        self.mask_predict_layer = nn.Sequential(
+#         self.mask_bottleneck = nn.ModuleList()
+        self.mask_predict_layer = nn.ModuleList()
+    
+    
+        for i in range(3):
+        
+            self.mask_predict_layer.append(nn.Sequential(
 
             nn.Dropout2d(0.2),
 
             ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
-
+                
             nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
             nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
 
@@ -71,8 +77,30 @@ class SMDCANet(nn.Module):
 
             # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
             nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
+            ))
 
-            )
+
+#         self.mask_predict_layer = nn.Sequential(
+
+# #             nn.Dropout2d(0.2),
+
+# #             ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
+# #             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
+# #             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
+
+#             nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
+#             nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
+
+#             nn.Conv2d(16, 8, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(8, momentum=BN_MOMENTUM),
+
+#             nn.ConvTranspose2d(8, 4, 2, stride=2, padding=0, output_padding=0, bias=False),
+#             nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
+
+#             # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
+#             nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
+
+#             )
 
             
 #         self.confidence_predict_layer = nn.ModuleList()
@@ -129,6 +157,8 @@ class SMDCANet(nn.Module):
     def forward(self, img):
 
         img_pair_num = img.size(0)//2 
+        size = img.shape
+        
         feature, den_scales, feature_den = self.Extractor(img)
 
 
@@ -169,7 +199,11 @@ class SMDCANet(nn.Module):
 
             f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
 #             mask = self.mask_predict_layer[scale](f)
-            mask = self.mask_predict_layer(f)
+
+#             f = self.mask_bottleneck[scale](f)
+#             mask = self.mask_predict_layer(f)
+            mask = self.mask_predict_layer[scale](f)
+
 
 
 #             confidence = self.confidence_predict_layer[scale](feature_den[scale])
@@ -182,9 +216,13 @@ class SMDCANet(nn.Module):
 #             confidences.append(confidence)
 #         confidences = torch.cat(confidences, dim=1)
         
-        f_con = torch.cat([feature_den[0],  F.interpolate(feature_den[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(feature_den[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-#         f_con = F.adaptive_avg_pool2d(f_con, (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
+#         f_con = torch.cat([feature_den[0],  F.interpolate(feature_den[1],scale_factor=2,mode='bilinear',align_corners=True),
+#                       F.interpolate(feature_den[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        
+        for scale in range(len(feature_den)):
+            feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
+        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1)
+    
         confidences = self.confidence_predict_layer(f_con)
 
 
@@ -201,7 +239,8 @@ class SMDCANet(nn.Module):
         io_probs = []
 
         for scale in range(len(masks)):
-            den = torch.zeros_like(den_scales[scale]).cuda()
+#             den = torch.zeros_like(den_scales[scale]).cuda()
+            
             mask_prob = torch.softmax(masks[scale], dim=1)
             den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
             io_prob = mask_prob[:,1,:,:].unsqueeze(1)
@@ -210,8 +249,10 @@ class SMDCANet(nn.Module):
             io_probs.append(io_prob)
 
 
-            den[0::2,:,:,:] = den_scales[scale][0::2,:,:,:] * den_prob[:img_pair_num,:,:,:]
-            den[1::2,:,:,:] = den_scales[scale][1::2,:,:,:] * den_prob[img_pair_num:,:,:,:]
+#             den[0::2,:,:,:] = den_scales[scale][0::2,:,:,:] * den_prob[:img_pair_num,:,:,:]
+#             den[1::2,:,:,:] = den_scales[scale][1::2,:,:,:] * den_prob[img_pair_num:,:,:,:]
+            den =  den_scales[scale].clone()
+    
             out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
             in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
 
@@ -231,7 +272,8 @@ class SMDCANet(nn.Module):
         out_dens = torch.cat(out_dens, dim=1)
         in_dens = torch.cat(in_dens, dim=1)
 
-        confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
+#         confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
+        confidence = F.upsample_nearest(confidence, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
 
 
         # if mode == "train" or mode == 'val':
