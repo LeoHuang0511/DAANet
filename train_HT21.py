@@ -703,7 +703,7 @@ if __name__=='__main__':
 
     #_test or val
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
-    parser.add_argument('--VAL_START', type=int, default=999)
+    parser.add_argument('--VAL_START', type=int, default=1)
 
     # parser.add_argument('--VAL_INTERVALS', type=int, default=75)
     # parser.add_argument('--ADJ_SCALES', type=int, nargs='+', default=[1])
