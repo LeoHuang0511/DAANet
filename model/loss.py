@@ -148,14 +148,17 @@ class ComputeKPILoss(object):
 #         if (self.trainer.i_tb >= self.cfg.Dynamic_freq) and (self.trainer.i_tb % self.cfg.Dynamic_freq == 0):
 #             self.dynamic_weight = (self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16)
         
-        if self.trainer.i_tb == 1:
-            self.init_scale_loss = scale_loss.item()
-            
-        self.dynamic_weight.update((self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16))
-            
+        if self.trainer.i_tb > 1000:
+            if self.trainer.i_tb % 500 == 0:
+                self.init_scale_loss = scale_loss.item()
+                self.dynamic_weight = AverageMeter()
+                
+            self.dynamic_weight.update((self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16))
+        else:
+            self.dynamic_weight.update(torch.Tensor([0]).cuda())
 
 #         loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
-        loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight.avg * (self.cnt_loss + (self.in_loss + self.out_loss))
+        loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight.avg * (self.cnt_loss + 0*(self.in_loss + self.out_loss))
         
         return loss
 
