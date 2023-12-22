@@ -174,7 +174,7 @@ class Trainer():
                                     self.cfg.LR_Thre,
                                     self.cfg.LR_DECAY)
 
-        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'confidence':AverageMeter()}
+        batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'scale_io':AverageMeter()}
 
         loader = self.train_loader
 
@@ -326,7 +326,8 @@ class Trainer():
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
-                self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
+                self.writer.add_scalar('loss_io_scale', batch_loss['scale_io'].avg, self.i_tb)
+
                 self.writer.add_scalar('dynamic_weight',self.compute_kpi_loss.dynamic_weight.avg, self.i_tb)
 
 
@@ -339,10 +340,9 @@ class Trainer():
 
                 self.timer['iter time'].toc(average=False)
                
-                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_conf %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['confidence'].avg, batch_loss['in'].avg,
+                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_io %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['scale_io'].avg, batch_loss['in'].avg,
                         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
-                
 
 
 
