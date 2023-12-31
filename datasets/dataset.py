@@ -122,7 +122,6 @@ class TestDataset(data.Dataset):
 
         index1 = index
         index2 = index + self.interval//2
-        index3 = index + self.interval
 
         
 

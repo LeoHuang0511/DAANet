@@ -210,6 +210,8 @@ def compute_color(u, v):
     ncols = np.size(colorwheel, 0)
 
     rad = np.sqrt(u ** 2 + v ** 2)
+   
+
 
     a = np.arctan2(-v, -u) / np.pi
 
@@ -226,6 +228,9 @@ def compute_color(u, v):
         # print(tmp.shape)
         # print(k0)
         # print(k1)
+       
+
+
 
         col0 = tmp[k0 - 1] / 255
         col1 = tmp[k1 - 1] / 255

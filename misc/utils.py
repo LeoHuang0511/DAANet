@@ -116,6 +116,9 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
     # for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data,pred_map0, gt_map0, pred_map1, gt_map1, \
     #                                  pred_mask_out, gt_mask_out, pred_mask_in, gt_mask_in, attn_1, attn_2)):
 
+    if cfg.mode == 'test':
+        cfg.TRAIN_BATCH_SIZE = cfg.VAL_BATCH_SIZE
+    
     COLOR_MAP = [
         [255, 0, 0],
         [0, 0, 255],
