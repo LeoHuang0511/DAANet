@@ -319,8 +319,7 @@ class SMDCAlignment(nn.Module):
         
         self.channel_size = num_feat
 
-        # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size, deformable_groups=4)
-        self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size, deformable_groups=1)
+        self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size, deformable_groups=4)
 
 
         self.weight_convs = nn.ModuleList()
