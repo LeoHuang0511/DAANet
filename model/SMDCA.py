@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .VGG.VGG16_FPN import VGG16_FPN
 from .attention import MultiScaleFeatureFusion, SpatialWeightLayer
-from .MSDA import MultiScaleDeformableAlingment#, VariantRegionAttention
+from .MSDA import OffsetVariantDeformableAlingment#, MultiScaleDeformableAlingment#, VariantRegionAttention
 from .dcn import DeformableConv2d
 from .VGG.conv import ResBlock
 import torch.nn.functional as F
@@ -256,7 +256,10 @@ class SMDCAlignment(nn.Module):
         
         self.channel_size = num_feat
 
-        self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
+        # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
+        self.multi_scale_dcn_alignment = OffsetVariantDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
+
+        
 
 
         # self.weight_convs = nn.ModuleList()

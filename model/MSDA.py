@@ -68,7 +68,7 @@ class OffsetVariantDeformableAlingment(nn.Module):
 
     def __init__(self,cfg, num_feat, deformable_groups=4, deform_kernel_size=3):
 
-        super(MultiScaleDeformableAlingment, self).__init__()
+        super(OffsetVariantDeformableAlingment, self).__init__()
         self.cfg = cfg
 
         

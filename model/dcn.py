@@ -12,7 +12,7 @@ class DeformableConv2d(nn.Module):
                  kernel_size=3,
                  stride=1,
                  padding=1,
-                 mult_column_offset=False
+                 mult_column_offset=False,
                  bias=False,
                  offset = None
                  ):
@@ -34,10 +34,10 @@ class DeformableConv2d(nn.Module):
                                         stride=stride,
                                         padding=self.padding, 
                                         bias=True)
-        self.offset = offset
 
             nn.init.constant_(self.offset_conv.weight, 0.)
             nn.init.constant_(self.offset_conv.bias, 0.)
+        self.offset = offset
         
         self.modulator_conv = nn.Conv2d(in_channels, 
                                      offset_groups * self.kernel_size[0] * self.kernel_size[1],
@@ -107,7 +107,7 @@ class MultiColumnOffsetConv(nn.Module):
             nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
         )
         self.conv = nn.Conv2d(int((in_dim//2)*3), 
-                                2 * self.kernel_size[0] * self.kernel_size[1], 
+                                2 * kernel_size[0] * kernel_size[1], 
                                 kernel_size=1, 
                                 dilation=1, 
                                 stride=stride, 
