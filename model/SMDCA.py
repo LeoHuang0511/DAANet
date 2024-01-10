@@ -52,32 +52,6 @@ class SMDCANet(nn.Module):
 
 #             ))
 
-#         self.mask_bottleneck = nn.ModuleList()
-        # self.mask_predict_layer = nn.ModuleList()
-    
-    
-        # for i in range(3):
-        
-        #     self.mask_predict_layer.append(nn.Sequential(
-
-        #     nn.Dropout2d(0.2),
-
-        #     ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
-        #     ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
-        #     ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
-                
-        #     nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
-        #     nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
-
-        #     nn.Conv2d(16, 8, kernel_size=3, stride=1, padding=1),
-        #     nn.BatchNorm2d(8, momentum=BN_MOMENTUM),
-
-        #     nn.ConvTranspose2d(8, 4, 2, stride=2, padding=0, output_padding=0, bias=False),
-        #     nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
-
-        #     # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
-        #     nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
-        #     ))
 
         self.mask_predict_layer = nn.Sequential(
 
@@ -141,116 +115,137 @@ class SMDCANet(nn.Module):
         feature, den_scales, feature_den = self.Extractor(img)
 
 
-
-        feature1 = []
-        feature2 = []
-        for scale in range(len(feature)):
-    
-            feature1.append(feature[scale][0::2,:,:,:])
-            feature2.append(feature[scale][1::2,:,:,:])
-
-
-        f_out, f_in, flow , back_flow, attn_1, attn_2= self.deformable_alignment(feature1, feature2)
-
-
-
-        masks = []
-        confidences = []
-
-        pre_outflow_maps = []
-        pre_inflow_maps = []
-        den_prob = []
-        io_prob = []
-        upsampled_den = []
+        # masks = []
+        # confidences = []
+        dens = []
         
-        for scale in range(len(f_out)):
+        for scale in range(len(den_scales)):
 
             den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
+            den =  den_scales[scale].clone()
+            den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+            dens.append(den)
+
         #     f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
         #     mask = self.mask_predict_layer[scale](f)
         #     masks.append(mask)
 
-        f = torch.cat([f_out,  f_in],dim=0)
-        masks = self.mask_predict_layer(f)
-#        
-
-
-        for scale in range(len(feature_den)):
             feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
+        
+        dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
+
         f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1)
-    
         confidences = self.confidence_predict_layer(f_con)
+        confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
+
+        confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
 
 
+        dens = torch.sum(dens * confidences, dim=1).unsqueeze(1)
 
-        return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+
+        feature1 = []
+        feature2 = []
+        for scale in range(len(feature)):
+
+            conf_1 = confidences[0::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
+            conf_2 = confidences[1::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
 
     
-    def scale_fuse(self, den_scales, masks, confidence, mode):
-
-        img_pair_num = den_scales[0].shape[0]//2
-        dens = []
-        out_dens = []
-        in_dens = []
-        den_probs = []
-        io_probs = []
-
-        for scale in range(len(masks)):
-#             den = torch.zeros_like(den_scales[scale]).cuda()
-            
-            mask_prob = torch.softmax(masks[scale], dim=1)
-            den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
-            io_prob = mask_prob[:,1,:,:].unsqueeze(1)
-
-            den_probs.append(den_prob)
-            io_probs.append(io_prob)
+            # feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
+            # feature2.append(feature[scale][1::2,:,:,:]) # (b,c,h,w)
+            feature1.append(conf_1 * feature[scale][0::2,:,:,:]) # (b,c,h,w)
+            feature2.append(conf_2 * feature[scale][1::2,:,:,:]) # (b,c,h,w)
 
 
-            den =  den_scales[scale].clone()
+
+
+        f_out, f_in, flow , back_flow, attn_1, attn_2= self.deformable_alignment(feature1, feature2)
+        f = torch.cat([f_out,  f_in],dim=0)
+        mask = self.mask_predict_layer(f)
+
+
+
+        mask_prob = torch.softmax(mask, dim=1)
+        den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
+        io_prob = mask_prob[:,1,:,:].unsqueeze(1)
+
+        out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
+        in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
+
+
+
+
+        # return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+        return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+
+
     
-            out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
-            in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
+#     def scale_fuse(self, den_scales, masks, confidence, mode):
+
+#         img_pair_num = den_scales[0].shape[0]//2
+#         dens = []
+#         out_dens = []
+#         in_dens = []
+#         den_probs = []
+#         io_probs = []
+
+#         for scale in range(len(masks)):
+# #             den = torch.zeros_like(den_scales[scale]).cuda()
+            
+#             mask_prob = torch.softmax(masks[scale], dim=1)
+#             den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
+#             io_prob = mask_prob[:,1,:,:].unsqueeze(1)
+
+#             den_probs.append(den_prob)
+#             io_probs.append(io_prob)
+
+
+#             den =  den_scales[scale].clone()
+    
+#             out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
+#             in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
 
             
-            den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-            out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-            in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+#             den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+#             out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
+#             in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
             
 
             
-            dens.append(den)
-            out_dens.append(out_den)
-            in_dens.append(in_den)
+#             dens.append(den)
+#             out_dens.append(out_den)
+#             in_dens.append(in_den)
         
-        dens = torch.cat(dens, dim=1)
+#         dens = torch.cat(dens, dim=1)
 
-        out_dens = torch.cat(out_dens, dim=1)
-        in_dens = torch.cat(in_dens, dim=1)
+#         out_dens = torch.cat(out_dens, dim=1)
+#         in_dens = torch.cat(in_dens, dim=1)
 
-#         confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
-        confidence = F.upsample_nearest(confidence, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
+# #         confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
+#         confidence = F.upsample_nearest(confidence, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
 
 
-        conf_mask = torch.softmax(confidence,dim=1)
+#         conf_mask = torch.softmax(confidence,dim=1)
         
 
 
-#         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
+# #         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
 
-#         final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-#         final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
-        final_den = torch.sum(dens * conf_mask, dim=1).unsqueeze(1)
+# #         final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+# #         final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+#         final_den = torch.sum(dens * conf_mask, dim=1).unsqueeze(1)
 
 
 
-#         out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-#         in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
+# #         out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
+# #         in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
         
-        out_dens = torch.sum(out_dens * conf_mask[0::2,:,:,:], dim=1).unsqueeze(1)
-        in_dens = torch.sum(in_dens * conf_mask[1::2,:,:,:], dim=1).unsqueeze(1)
+#         out_dens = torch.sum(out_dens * conf_mask[0::2,:,:,:], dim=1).unsqueeze(1)
+#         in_dens = torch.sum(in_dens * conf_mask[1::2,:,:,:], dim=1).unsqueeze(1)
 
-        return final_den, out_dens, in_dens, den_probs, io_probs, conf_mask
-# -
+#         return final_den, out_dens, in_dens, den_probs, io_probs, conf_mask
+# # -
 
 
 
