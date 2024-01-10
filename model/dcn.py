@@ -12,6 +12,7 @@ class DeformableConv2d(nn.Module):
                  kernel_size=3,
                  stride=1,
                  padding=1,
+                 mult_column_offset=False
                  bias=False,
                  offset = None
                  ):
@@ -24,16 +25,19 @@ class DeformableConv2d(nn.Module):
         self.stride = stride if type(stride) == tuple else (stride, stride)
         self.padding = padding
         self.offset_groups = offset_groups
-        self.offset_conv = nn.Conv2d(in_channels // offset_groups * 2, 
-                                     2 * self.kernel_size[0] * self.kernel_size[1],
-                                     kernel_size=kernel_size, 
-                                     stride=stride,
-                                     padding=self.padding, 
-                                     bias=True)
+        if mult_column_offset:
+            self.offset_conv = MultiColumnOffsetConv(in_channels // offset_groups * 2, self.kernel_size, self.stride, self.padding)
+        else:
+            self.offset_conv = nn.Conv2d(in_channels // offset_groups * 2, 
+                                        2 * self.kernel_size[0] * self.kernel_size[1],
+                                        kernel_size=kernel_size, 
+                                        stride=stride,
+                                        padding=self.padding, 
+                                        bias=True)
         self.offset = offset
 
-        nn.init.constant_(self.offset_conv.weight, 0.)
-        nn.init.constant_(self.offset_conv.bias, 0.)
+            nn.init.constant_(self.offset_conv.weight, 0.)
+            nn.init.constant_(self.offset_conv.bias, 0.)
         
         self.modulator_conv = nn.Conv2d(in_channels, 
                                      offset_groups * self.kernel_size[0] * self.kernel_size[1],
@@ -84,3 +88,38 @@ class DeformableConv2d(nn.Module):
                                           )
         return x, offset_map
 
+class MultiColumnOffsetConv(nn.Module):
+
+    def __init__(self, in_dim, kernel_size, stride, padding):
+
+        super(MultiColumnOffsetConv,self).__init__()
+
+        self.column1 = nn.Sequential(
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True),
+            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+        )
+        self.column2 = nn.Sequential(
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=2, stride=stride, padding=padding,bias=True),
+            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+        )
+        self.column2 = nn.Sequential(
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=3, stride=stride, padding=padding,bias=True),
+            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+        )
+        self.conv = nn.Conv2d(int((in_dim//2)*3), 
+                                2 * self.kernel_size[0] * self.kernel_size[1], 
+                                kernel_size=1, 
+                                dilation=1, 
+                                stride=stride, 
+                                padding=padding,
+                                bias=True)
+
+        nn.init.constant_(self.conv.weight, 0.)
+        nn.init.constant_(self.conv.bias, 0.)
+
+    def forward(x):
+        x = torch.cat(self.column1(x), self.column2(x), self.column3(x), dim=1)
+        x = self.conv(x)
+
+        return x
+        
