@@ -213,7 +213,9 @@ class Trainer():
 
             
             img_pair_num = img.size(0)//2  
-            den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            # den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+
             
 
             pre_inf_cnt = []
@@ -268,7 +270,9 @@ class Trainer():
                                                                             self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
-            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
+            # gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
+            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
+
             # overall loss
 
             ############  gt confidence ################
@@ -280,11 +284,9 @@ class Trainer():
 
 
             ############ generate final den and io flow ########
-            final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
+            # final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
             
-            # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
-            # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
-            # in_den = torch.sum(in_den, dim=1).unsqueeze(1) / in_den.shape[1]
+            
 
 
 
@@ -293,7 +295,8 @@ class Trainer():
             ##############################################
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            # kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
@@ -321,8 +324,8 @@ class Trainer():
             batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
             batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
-            batch_loss['scale_io'].update((self.compute_kpi_loss.out_loss_scales.sum() \
-                                           +self.compute_kpi_loss.in_loss_scales.sum()).item())
+            # batch_loss['scale_io'].update((self.compute_kpi_loss.out_loss_scales.sum() \
+            #                                +self.compute_kpi_loss.in_loss_scales.sum()).item())
             
             batch_loss['con'].update(con_loss.item())
             # batch_loss['confidence'].update(confidence_loss.item())
@@ -344,7 +347,7 @@ class Trainer():
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
 #                 self.writer.add_scalar('loss_conf', batch_loss['confidence'].avg, self.i_tb)
-                self.writer.add_scalar('loss_io_scale', batch_loss['scale_io'].avg, self.i_tb)
+                # self.writer.add_scalar('loss_io_scale', batch_loss['scale_io'].avg, self.i_tb)
                 self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
 
 
@@ -365,17 +368,18 @@ class Trainer():
 
 
             if (self.i_tb) % self.cfg.SAVE_VIS_FREQ == 0:
+                
                 # save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
-                #                   img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), 
-                #                   den[0].detach().cpu().numpy() , gt_den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[1].detach().cpu().numpy() , \
-                #                   (mask[0,:,:,:]).detach().cpu().numpy(), gt_mask[0,0:1,:,:].detach().cpu().numpy(), \
-                #                   (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
-                #                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales)
+                #                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                #                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                #                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                #                     f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
+                                    [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
+                                    [mask,mask,mask], [gt_mask_scales,gt_mask_scales,gt_mask_scales], [den_probs,den_probs,den_probs], [io_probs,io_probs,io_probs])
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
                 self.timer['val time'].tic()
@@ -439,11 +443,13 @@ class Trainer():
 
 
 
-                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+                        # den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+                        _, final_den, _, out_den, in_den, _, _, _, _, _, _, _, _, _ = self.net(img)
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs, _ = self.net.scale_fuse(den_scales, masks, confidence, 'val')
+
+                        # final_den, out_den, in_den, den_probs, io_probs, _ = self.net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 

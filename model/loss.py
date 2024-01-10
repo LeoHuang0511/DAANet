@@ -54,9 +54,9 @@ class ComputeKPILoss(object):
         assert den.shape == gt_den_scales[0].shape
         self.cnt_loss = F.mse_loss(den*self.DEN_FACTOR, gt_den_scales[0] * self.DEN_FACTOR)
         self.cnt_loss_scales = torch.zeros(len(den_scales)).cuda()
-        self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
-        self.out_loss_scales = torch.zeros(len(den_scales)).cuda()
-        self.in_loss_scales = torch.zeros(len(den_scales)).cuda()
+        # self.mask_loss_scales = torch.zeros(len(den_scales)).cuda()
+        # self.out_loss_scales = torch.zeros(len(den_scales)).cuda()
+        # self.in_loss_scales = torch.zeros(len(den_scales)).cuda()
         
 
 
@@ -80,31 +80,32 @@ class ComputeKPILoss(object):
             # print(f"{scale} ",gt_masks[scale].shape)
 
                   
-            self.mask_loss_scales[scale] += (F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")+ \
-                                F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")) * self.mask_scale_weight[scale]
+            # self.mask_loss_scales[scale] += (F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")+ \
+            #                     F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")) * self.mask_scale_weight[scale]
 
         
             # # # inflow/outflow scale loss
-            mask_prob = F.softmax(masks[scale], dim=1)
-            pre_out_map_scale = den_scales[scale][0::2,:,:,:] * mask_prob[:img_pair_num,1:2,:,:]
-            pre_in_map_scale = den_scales[scale][1::2,:,:,:] * mask_prob[img_pair_num:,1:2,:,:]
+            # mask_prob = F.softmax(masks[scale], dim=1)
+            # pre_out_map_scale = den_scales[scale][0::2,:,:,:] * mask_prob[:img_pair_num,1:2,:,:]
+            # pre_in_map_scale = den_scales[scale][1::2,:,:,:] * mask_prob[img_pair_num:,1:2,:,:]
         
         
-            gt_outflow_map_scale = (gt_masks[scale][:,0:1,:,:] == 1) * gt_den_scales[scale][0::2,:,:,:] 
-            gt_inflow_map_scale = (gt_masks[scale][:,1:2,:,:] == 1) * gt_den_scales[scale][1::2,:,:,:]
+            # gt_outflow_map_scale = (gt_masks[scale][:,0:1,:,:] == 1) * gt_den_scales[scale][0::2,:,:,:] 
+            # gt_inflow_map_scale = (gt_masks[scale][:,1:2,:,:] == 1) * gt_den_scales[scale][1::2,:,:,:]
             
             
-            assert pre_out_map_scale.shape == gt_outflow_map_scale.shape
-            assert pre_in_map_scale.shape == gt_inflow_map_scale.shape
+            # assert pre_out_map_scale.shape == gt_outflow_map_scale.shape
+            # assert pre_in_map_scale.shape == gt_inflow_map_scale.shape
             
             
-            self.out_loss_scales[scale] += F.mse_loss(pre_out_map_scale, gt_outflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
-            self.in_loss_scales[scale] += F.mse_loss(pre_in_map_scale, gt_inflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
+            # self.out_loss_scales[scale] += F.mse_loss(pre_out_map_scale, gt_outflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
+            # self.in_loss_scales[scale] += F.mse_loss(pre_in_map_scale, gt_inflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
             
-            
+        self.mask_loss_scales = F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")
         # # # inflow/outflow loss
         
         self.in_loss, self.out_loss = self.compute_io_loss(pre_outflow_map, pre_inflow_map, gt_masks, gt_den_scales)
+        
 
 
 
