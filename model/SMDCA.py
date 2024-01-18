@@ -163,7 +163,7 @@ class SMDCANet(nn.Module):
 
 
 
-        f_out, f_in, flow , back_flow, attn_1, attn_2= self.deformable_alignment(feature1, feature2)
+        f_out, f_in, flow , back_flow, attn_1, attn_2 = self.deformable_alignment(feature1, feature2)
         f = torch.cat([f_out,  f_in],dim=0)
         mask = self.mask_predict_layer(f)
 
@@ -259,6 +259,11 @@ class SMDCAlignment(nn.Module):
         
         self.channel_size = num_feat
 
+        self.feature_head = nn.Sequential(
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+        )
+
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
         self.multi_scale_dcn_alignment = OffsetVariantDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
 
@@ -274,8 +279,8 @@ class SMDCAlignment(nn.Module):
         #     ))
 
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*6, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
      
@@ -289,6 +294,10 @@ class SMDCAlignment(nn.Module):
                       F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
         f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
                       F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+
+        f1 = self.feature_head(f1)
+        f2 = self.feature_head(f2)
+
 
         f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
         f2_aligned, b_flow = self.multi_scale_dcn_alignment(f2, f1)
