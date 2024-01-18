@@ -134,7 +134,7 @@ class SMDCANet(nn.Module):
         
         dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
 
-        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1)
+        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
         confidences = self.confidence_predict_layer(f_con)
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
 
@@ -147,9 +147,12 @@ class SMDCANet(nn.Module):
         feature1 = []
         feature2 = []
         for scale in range(len(feature)):
-
+            
             conf_1 = confidences[0::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
+            conf_1 = F.adaptive_avg_pool2d(conf_1, feature[scale].shape[2:])
             conf_2 = confidences[1::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
+            conf_2 = F.adaptive_avg_pool2d(conf_2, feature[scale].shape[2:])
+
 
     
             # feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
@@ -271,8 +274,8 @@ class SMDCAlignment(nn.Module):
         #     ))
 
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size*6, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
      
@@ -308,8 +311,8 @@ class SMDCAlignment(nn.Module):
         #     attn_1.append([f1[scale],f2_aligned[scale]])
         #     attn_2.append([f2[scale],f1_aligned[scale]])
 
-        f_out = self.weight(torch.cat([f1, f2_aligned], dim=1))
-        f_in = self.weight(torch.cat([f2, f1_aligned], dim=1))
+        f_out = self.weight_conv(torch.cat([f1, f2_aligned], dim=1))
+        f_in = self.weight_conv(torch.cat([f2, f1_aligned], dim=1))
         attn_1 = [f1, f2_aligned]
         attn_2 = [f2, f1_aligned]
 

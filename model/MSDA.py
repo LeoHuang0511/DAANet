@@ -88,7 +88,7 @@ class OffsetVariantDeformableAlingment(nn.Module):
           
         #     self.deformable_convs[level] = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1)
         
-        deformable_conv = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1, mult_column_offset=True)
+        self.deformable_conv = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1, mult_column_offset=True)
 
 
 
@@ -105,7 +105,7 @@ class OffsetVariantDeformableAlingment(nn.Module):
         
 
  
-        return feat, offset
+        return feat, offset_v
     
     
 

@@ -78,6 +78,8 @@ class DeformableConv2d(nn.Module):
         # offset = offset_visualization(offset_map, 8)
 
         modulator = 2. * torch.sigmoid(self.modulator_conv(warp_ref))
+
+
         x = torchvision.ops.deform_conv2d(input=warp_ref, 
                                           offset=offset_map, 
                                           weight=self.regular_conv.weight, 
@@ -95,15 +97,15 @@ class MultiColumnOffsetConv(nn.Module):
         super(MultiColumnOffsetConv,self).__init__()
 
         self.column1 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True),
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
             nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
         )
         self.column2 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=2, stride=stride, padding=padding,bias=True),
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
             nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
         )
-        self.column2 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=3, stride=stride, padding=padding,bias=True),
+        self.column3 = nn.Sequential(
+            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
             nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
         )
         self.conv = nn.Conv2d(int((in_dim//2)*3), 
@@ -111,15 +113,16 @@ class MultiColumnOffsetConv(nn.Module):
                                 kernel_size=1, 
                                 dilation=1, 
                                 stride=stride, 
-                                padding=padding,
+                                padding=0,
                                 bias=True)
 
         nn.init.constant_(self.conv.weight, 0.)
         nn.init.constant_(self.conv.bias, 0.)
 
-    def forward(x):
-        x = torch.cat(self.column1(x), self.column2(x), self.column3(x), dim=1)
+    def forward(self, x):
+        x = torch.cat([self.column1(x), self.column2(x), self.column3(x)], dim=1)
         x = self.conv(x)
+
 
         return x
         

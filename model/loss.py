@@ -100,8 +100,10 @@ class ComputeKPILoss(object):
             
             # self.out_loss_scales[scale] += F.mse_loss(pre_out_map_scale, gt_outflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
             # self.in_loss_scales[scale] += F.mse_loss(pre_in_map_scale, gt_inflow_map_scale,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE * self.io_scale_weight[scale]
-            
-        self.mask_loss_scales = F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")
+        
+
+        self.mask_loss_scales = F.cross_entropy(masks[:img_pair_num], gt_masks[0][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")\
+                                +F.cross_entropy(masks[img_pair_num:], gt_masks[0][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")
         # # # inflow/outflow loss
         
         self.in_loss, self.out_loss = self.compute_io_loss(pre_outflow_map, pre_inflow_map, gt_masks, gt_den_scales)
@@ -158,7 +160,9 @@ class ComputeKPILoss(object):
             
         avg_dynamic_weight = sum(self.dynamic_weight) / len(self.dynamic_weight)
 #         loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
-        loss = scale_loss + self.mask_loss_scales.sum() + self.out_loss_scales.sum() + self.in_loss_scales.sum() + \
+        # loss = scale_loss + self.mask_loss_scales.sum() + self.out_loss_scales.sum() + self.in_loss_scales.sum() + \
+        #     avg_dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
+        loss = scale_loss + self.mask_loss_scales.sum() + \
             avg_dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
         
         return loss
