@@ -163,7 +163,7 @@ class SMDCANet(nn.Module):
 
 
 
-        f_out, f_in, flow , back_flow, attn_1, attn_2 = self.deformable_alignment(feature1, feature2)
+        f_out, f_in, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature1, feature2)
         f = torch.cat([f_out,  f_in],dim=0)
         mask = self.mask_predict_layer(f)
 
@@ -180,7 +180,9 @@ class SMDCANet(nn.Module):
 
 
         # return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
-        return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+        # return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
+        return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, f1, f2, attn_1, attn_2
+
 
 
     
@@ -265,7 +267,7 @@ class SMDCAlignment(nn.Module):
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = OffsetVariantDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
+        self.multi_scale_dcn_alignment = OffsetVariantDeformableAlingment(cfg, self.channel_size, deformable_groups=4)
 
         
 
@@ -328,7 +330,7 @@ class SMDCAlignment(nn.Module):
 
             
     
-        return f_out, f_in, f_flow, b_flow, attn_1, attn_2
+        return f_out, f_in, f_flow, b_flow, attn_1, attn_2, f1, f2
 
 
 

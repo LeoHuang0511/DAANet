@@ -176,18 +176,24 @@ class ComputeKPILoss(object):
         head_f0 = []
         head_f1 = []
 
-        self.con_inter_loss = torch.zeros(len(feature1)).cuda()
+        # self.con_inter_loss = torch.zeros(len(feature1)).cuda()
 
 
-        for scale in range(len(feature1)):
+        # for scale in range(len(feature1)):
 
                             
-            mdesc0, mdesc1 = self.get_head_feature(pair_idx, feature1[scale], feature2[scale], pois, count_in_pair, feature_scale / (scale+1))
+        #     mdesc0, mdesc1 = self.get_head_feature(pair_idx, feature1[scale], feature2[scale], pois, count_in_pair, feature_scale / (scale+1))
 
-            self.con_inter_loss[scale] =   self.con_inter_loss[scale] + \
-                self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1]) * self.cfg.con_scale**(-scale)
-            head_f0.append(mdesc0)
-            head_f1.append(mdesc1)
+        #     self.con_inter_loss[scale] =   self.con_inter_loss[scale] + \
+        #         self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1]) * self.cfg.con_scale**(-scale)
+        #     head_f0.append(mdesc0)
+        #     head_f1.append(mdesc1)
+        mdesc0, mdesc1 = self.get_head_feature(pair_idx, feature1, feature2, pois, count_in_pair, feature_scale)
+
+        con_inter_loss =   self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1])
+
+
+
         # mdesc0, mdesc1 = self.get_head_feature(pair_idx, feature1, feature2, pois, count_in_pair, feature_scale)
 
         # inter_loss =  inter_loss + \
@@ -206,7 +212,9 @@ class ComputeKPILoss(object):
         #         intra_loss = intra_loss + intra0 + intra1
         
         # return inter_loss + intra_loss * self.cfg.intra_loss_alpha
-        return self.con_inter_loss[scale].sum()
+        # return self.con_inter_loss[scale].sum()
+        return con_inter_loss.sum()
+
     
 
 
