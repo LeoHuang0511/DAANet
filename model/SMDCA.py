@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .VGG.VGG16_FPN import VGG16_FPN
 from .attention import MultiScaleFeatureFusion, SpatialWeightLayer
-from .MSDA import OffsetVariantDeformableAlingment#, MultiScaleDeformableAlingment#, VariantRegionAttention
+# from .MSDA import OffsetVariantDeformableAlingment#, MultiScaleDeformableAlingment#, VariantRegionAttention
 from .dcn import DeformableConv2d
 from .VGG.conv import ResBlock
 import torch.nn.functional as F
@@ -25,33 +25,6 @@ class SMDCANet(nn.Module):
         
         self.deformable_alignment = SMDCAlignment(cfg, num_feat, scale_num=3)
         
-    
-
-#         self.mask_predict_layer = nn.ModuleList()
-#         for i in range(3):
-        
-#             self.mask_predict_layer.append(nn.Sequential(
-
-#             nn.Dropout2d(0.2),
-
-#             ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
-#             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
-#             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
-
-#             nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
-#             nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
-
-#             nn.Conv2d(16, 8, kernel_size=3, stride=1, padding=1),
-#             nn.BatchNorm2d(8, momentum=BN_MOMENTUM),
-
-#             nn.ConvTranspose2d(8, 4, 2, stride=2, padding=0, output_padding=0, bias=False),
-#             nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
-
-#             # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
-#             nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
-
-#             ))
-
 
         self.mask_predict_layer = nn.Sequential(
 
@@ -114,57 +87,36 @@ class SMDCANet(nn.Module):
         
         feature, den_scales, feature_den = self.Extractor(img)
 
-
-        # masks = []
-        # confidences = []
         dens = []
         
         for scale in range(len(den_scales)):
 
             den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
-            den =  den_scales[scale].clone()
-            den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-            dens.append(den)
+            dens.append(F.interpolate(den_scales[scale], scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale))
 
         #     f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
         #     mask = self.mask_predict_layer[scale](f)
         #     masks.append(mask)
 
-            feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
+            feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE)) # (b*2, 128, h/conf_block_size, w/conf_block_size)
         
         dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
 
-        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
-        confidences = self.confidence_predict_layer(f_con)
+        confidences = self.confidence_predict_layer(torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1))
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
-
         confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
-
 
         dens = torch.sum(dens * confidences, dim=1).unsqueeze(1)
 
 
-        feature1 = []
-        feature2 = []
-        for scale in range(len(feature)):
-            
-            conf_1 = confidences[0::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
-            conf_1 = F.adaptive_avg_pool2d(conf_1, feature[scale].shape[2:])
-            conf_2 = confidences[1::2,scale,:,:].unsqueeze(1) # (b,1,h,w)
-            conf_2 = F.adaptive_avg_pool2d(conf_2, feature[scale].shape[2:])
-
-
-    
-            # feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
-            # feature2.append(feature[scale][1::2,:,:,:]) # (b,c,h,w)
-            feature1.append(conf_1 * feature[scale][0::2,:,:,:]) # (b,c,h,w)
-            feature2.append(conf_2 * feature[scale][1::2,:,:,:]) # (b,c,h,w)
+        
+        feature =torch.cat([feature[0] * confidences[:,0,:,:].unsqueeze(1),  \
+                            F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * confidences[:,1,:,:].unsqueeze(1),
+                            F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * confidences[:,2,:,:].unsqueeze(1)], dim=1)
 
 
 
-
-        f_out, f_in, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature1, feature2)
-        f = torch.cat([f_out,  f_in],dim=0)
+        f, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature)
         mask = self.mask_predict_layer(f)
 
 
@@ -185,75 +137,6 @@ class SMDCANet(nn.Module):
 
 
 
-    
-#     def scale_fuse(self, den_scales, masks, confidence, mode):
-
-#         img_pair_num = den_scales[0].shape[0]//2
-#         dens = []
-#         out_dens = []
-#         in_dens = []
-#         den_probs = []
-#         io_probs = []
-
-#         for scale in range(len(masks)):
-# #             den = torch.zeros_like(den_scales[scale]).cuda()
-            
-#             mask_prob = torch.softmax(masks[scale], dim=1)
-#             den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
-#             io_prob = mask_prob[:,1,:,:].unsqueeze(1)
-
-#             den_probs.append(den_prob)
-#             io_probs.append(io_prob)
-
-
-#             den =  den_scales[scale].clone()
-    
-#             out_den = den_scales[scale][0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
-#             in_den = den_scales[scale][1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
-
-            
-#             den = F.interpolate(den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-#             out_den = F.interpolate(out_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-#             in_den = F.interpolate(in_den,scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale)
-            
-
-            
-#             dens.append(den)
-#             out_dens.append(out_den)
-#             in_dens.append(in_den)
-        
-#         dens = torch.cat(dens, dim=1)
-
-#         out_dens = torch.cat(out_dens, dim=1)
-#         in_dens = torch.cat(in_dens, dim=1)
-
-# #         confidence = F.upsample_nearest(confidence, scale_factor = 1//self.cfg.feature_scale).cuda()
-#         confidence = F.upsample_nearest(confidence, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
-
-
-#         conf_mask = torch.softmax(confidence,dim=1)
-        
-
-
-# #         final_den = torch.zeros((dens.shape[0],1,dens.shape[2], dens.shape[3])).cuda()
-
-# #         final_den[0::2,:,:,:] = torch.sum(dens[0::2,:,:,:] * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-# #         final_den[1::2,:,:,:] = torch.sum(dens[1::2,:,:,:] * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
-#         final_den = torch.sum(dens * conf_mask, dim=1).unsqueeze(1)
-
-
-
-# #         out_dens = torch.sum(out_dens * conf_mask[:img_pair_num,:,:,:], dim=1).unsqueeze(1)
-# #         in_dens = torch.sum(in_dens * conf_mask[img_pair_num:,:,:,:], dim=1).unsqueeze(1)
-        
-#         out_dens = torch.sum(out_dens * conf_mask[0::2,:,:,:], dim=1).unsqueeze(1)
-#         in_dens = torch.sum(in_dens * conf_mask[1::2,:,:,:], dim=1).unsqueeze(1)
-
-#         return final_den, out_dens, in_dens, den_probs, io_probs, conf_mask
-# # -
-
-
-
 class SMDCAlignment(nn.Module):
 
     def __init__(self,cfg, num_feat, scale_num):
@@ -262,75 +145,51 @@ class SMDCAlignment(nn.Module):
         self.channel_size = num_feat
 
         self.feature_head = nn.Sequential(
+                                nn.Dropout2d(0.2),
                                 ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+
+                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
+                                BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
+                                nn.ReLU(inplace=True),
+                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = OffsetVariantDeformableAlingment(cfg, self.channel_size, deformable_groups=4)
+        self.multi_scale_dcn_alignment = DeformableConv2d(channel_size*2, channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 
-
-        # self.weight_convs = nn.ModuleList()
-
-        # for i in range(scale_num):
-        #     self.weight_convs.append(nn.Sequential(
-        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
-        #     ))
-
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
      
 
 
-    def forward(self, f1, f2):
+    def forward(self, f):
 
-       
-
-        f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-
-        f1 = self.feature_head(f1)
-        f2 = self.feature_head(f2)
+        
+        f = self.feature_head(f)
+        f1 = f[0::2,:,:,:]
+        f2 = f[1::2,:,:,:]
 
 
         f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
         f2_aligned, b_flow = self.multi_scale_dcn_alignment(f2, f1)
-        # f1_aligned = f1_aligned[::-1]
-        # f2_aligned = f2_aligned[::-1]
-        # f_flow = f_flow[::-1]
-        # b_flow = b_flow[::-1]
-    
-
-
-        # attn_2 = []
-        # attn_1 = []
-        # f_out = []
-        # f_in = []
-
-        # for scale in range(3):
-        #     f_out.append(self.weight_convs[scale](torch.cat([f1[scale], f2_aligned[scale]], dim=1)))
-        #     f_in.append(self.weight_convs[scale](torch.cat([f2[scale], f1_aligned[scale]], dim=1)))
-
-        #     attn_1.append([f1[scale],f2_aligned[scale]])
-        #     attn_2.append([f2[scale],f1_aligned[scale]])
-
+       
         f_out = self.weight_conv(torch.cat([f1, f2_aligned], dim=1))
         f_in = self.weight_conv(torch.cat([f2, f1_aligned], dim=1))
         attn_1 = [f1, f2_aligned]
         attn_2 = [f2, f1_aligned]
 
+        f_mask = torch.cat([f_out,  f_in],dim=0)
+
 
             
     
-        return f_out, f_in, f_flow, b_flow, attn_1, attn_2, f1, f2
+        return f_mask, f_flow, b_flow, attn_1, attn_2, f1, f2
 
 
 

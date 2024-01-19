@@ -88,7 +88,9 @@ class DeformableConv2d(nn.Module):
                                           mask=modulator,
                                           stride=self.stride,
                                           )
-        return x, offset_map
+                                          
+        offset_vis = offset_visualization(offset_visualization(offset_v, 1 //( self.cfg.feature_scale)))
+        return x, offset_vis
 
 class MultiColumnOffsetConv(nn.Module):
 
@@ -96,33 +98,47 @@ class MultiColumnOffsetConv(nn.Module):
 
         super(MultiColumnOffsetConv,self).__init__()
 
+        self.conv1 =  nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
+
         self.column1 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
         self.column2 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
         self.column3 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=padding,bias=True)
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
+            nn.Conv2d(in_dim//2, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
-        self.conv = nn.Conv2d(int((in_dim//2)*3), 
+        self.conv2 = nn.Conv2d(in_dim//2*3, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
+        
+        self.offset_conv = nn.Conv2d(in_dim//2*3, 
                                 2 * kernel_size[0] * kernel_size[1], 
-                                kernel_size=1, 
+                                kernel_size=3, 
                                 dilation=1, 
                                 stride=stride, 
-                                padding=0,
+                                padding=1,
                                 bias=True)
 
-        nn.init.constant_(self.conv.weight, 0.)
-        nn.init.constant_(self.conv.bias, 0.)
+        nn.init.constant_(self.offset_conv.weight, 0.)
+        nn.init.constant_(self.offset_conv.bias, 0.)
 
     def forward(self, x):
-        x = torch.cat([self.column1(x), self.column2(x), self.column3(x)], dim=1)
-        x = self.conv(x)
+        x1 = self.conv1(x)
+        x2 = torch.cat([self.column1(x1), self.column2(x1), self.column3(x1)], dim=1)
+        x2 = self.conv2(x2)
+        x3 = self.offset_conv(x1 + x2)
 
-
-        return x
+        return x3
         
+def offset_visualization(offset, feature_scale):
+    offset_y = offset[:,0::2,:,:] #vertical
+    offset_x = offset[:,1::2,:,:] #horizontal
+    offset_y_mean = torch.mean(offset_x,dim = 1, keepdims = True)
+    offset_x_mean = torch.mean(offset_y,dim = 1, keepdims = True)
+
+    offset = torch.concat([offset_x_mean,offset_y_mean],axis = 1)
+    offset = F.interpolate(offset,scale_factor=feature_scale,mode='bilinear',align_corners=True) * feature_scale
+    return offset

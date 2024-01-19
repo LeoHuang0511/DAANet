@@ -64,60 +64,39 @@ from .dcn import DeformableConv2d
 #         return cat_feat, offset_vs
 
 
-class OffsetVariantDeformableAlingment(nn.Module):
+# class OffsetVariantDeformableAlingment(nn.Module):
 
-    def __init__(self,cfg, num_feat, deformable_groups=4, deform_kernel_size=3):
+#     def __init__(self,cfg, num_feat, deformable_groups=4, deform_kernel_size=3):
 
-        super(OffsetVariantDeformableAlingment, self).__init__()
-        self.cfg = cfg
-
-        
-        self.deformable_groups = deformable_groups
-        self.deform_kernel_size = deform_kernel_size
-        self.channel_size = num_feat
-
-
-        # self.deformable_convs = nn.ModuleDict()
-
-            
-        
-
-        # # Pyramids
-        # for i in range(3, 0, -1):
-        #     level = f'l{i}'
-          
-        #     self.deformable_convs[level] = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1)
-        
-        self.deformable_conv = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1, mult_column_offset=True)
-
-
-
-
-    def forward(self, sou, ref):
-        
+#         super(OffsetVariantDeformableAlingment, self).__init__()
+#         self.cfg = cfg
 
         
+#         self.deformable_groups = deformable_groups
+#         self.deform_kernel_size = deform_kernel_size
+#         self.channel_size = num_feat
+
+
+
+                    
+#         self.deformable_conv = DeformableConv2d(self.channel_size, self.channel_size, self.deformable_groups, kernel_size=self.deform_kernel_size, padding = 1, mult_column_offset=True)
+
+
+
+
+#     def forward(self, sou, ref):
         
 
-        feat, offset_v = self.deformable_conv(sou, ref)
-        offset_v = offset_visualization(offset_v, 1 //( self.cfg.feature_scale))
-        
-        
 
+#         feat, offset_v = self.deformable_conv(sou, ref)
+#         offset_v = offset_visualization(offset_v, 1 //( self.cfg.feature_scale))
+        
  
-        return feat, offset_v
+#         return feat, offset_v
     
     
 
-def offset_visualization(offset, feature_scale):
-    offset_y = offset[:,0::2,:,:] #vertical
-    offset_x = offset[:,1::2,:,:] #horizontal
-    offset_y_mean = torch.mean(offset_x,dim = 1, keepdims = True)
-    offset_x_mean = torch.mean(offset_y,dim = 1, keepdims = True)
 
-    offset = torch.concat([offset_x_mean,offset_y_mean],axis = 1)
-    offset = F.interpolate(offset,scale_factor=feature_scale,mode='bilinear',align_corners=True) * feature_scale
-    return offset
     
    
 
