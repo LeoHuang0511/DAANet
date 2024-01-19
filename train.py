@@ -4,17 +4,12 @@ import torch
 from torch import optim
 import datasets
 from misc.utils import *
-# from model.video_crowd_count import video_crowd_count
 from model.SMDCA import SMDCANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
-# import matplotlib.cm as cm
-# from pathlib import Path
 from misc.lr_scheduler import CosineAnnealingWarmupRestarts
 
-# from evaluation import metrics
-# from misc.layer import Gaussianlayer
 from misc.gt_generate import *
 
 
@@ -25,7 +20,6 @@ import random
 import numpy as np
 import torch
 import datasets
-# from config import cfg
 from importlib import import_module
 
 import argparse
@@ -33,24 +27,18 @@ import argparse
 
 
 
-# from config import cfg
-# from misc.KPI_pool import Task_KPI_Pool
-# from thop import profile
 class Trainer():
     def __init__(self,cfg, cfg_data, pwd):
         self.exp_name = cfg.EXP_NAME
         self.exp_path = cfg.EXP_PATH
         self.cfg = cfg
 
-        # self.device = torch.device("cuda:" + cfg.GPU_ID)
         self.device = torch.device("cuda:"+str(torch.cuda.current_device()))
 
         self.pwd = pwd
         self.cfg_data = cfg_data
-        # self.Gaussian = Gaussianlayer(sigma=[4/cfg.GRID_SIZE]).to(self.device)
         self.resume = cfg.RESUME
 
-        # self.net = video_crowd_count(cfg, cfg_data)
         self.net = SMDCANet(cfg, cfg_data).cuda()
 
 
@@ -62,13 +50,10 @@ class Trainer():
         
         ]
         
-        # self.optimizer = optim.Adam(params)
 
         
         self.i_tb = 0
         self.epoch = 1
-        # self.train_record = {'cnt_mae':1e20, 'cnt_rmse':1e20, 'flow_mae':1e20, 'flow_mae_inv':1e20,\
-        #                     'flow_rmse':1e20, 'flow_rmse_inv':1e20, 'flow_mape':1e20, 'flow_mape_inv':1e20, 'seq_MAE':1e20, 'seq_MSE':1e20, 'WRAE':1e20, 'MIAE':1e20}
         if cfg.task == "SP":
             self.train_record = {'best_model_name': '', 'den_mae':1e20, 'den_mse':1e20, 'in_mae':1e20, 'in_mse':1e20,\
                                                 'out_mae':1e20, 'out_mse':1e20}
@@ -82,7 +67,7 @@ class Trainer():
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
             self.optimizer.load_state_dict(latest_state['optimizer'])
-            # self.lr_scheduler.load_state_dict(latest_state['scheduler'])
+            self.lr_scheduler.load_state_dict(latest_state['scheduler'])
             self.epoch = latest_state['epoch']
             self.i_tb = latest_state['i_tb']
             self.train_record = latest_state['train_record']
@@ -198,14 +183,11 @@ class Trainer():
 
             
             img_pair_num = img.size(0)//2  
-            den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
             
 
             pre_inf_cnt = []
             pre_out_cnt = []
-            # for scale in range(len(pre_inflow_map)):
-            #     pre_inf_cnt.append(pre_inflow_map[scale].sum(axis=2).sum(axis=2).detach())
-            #     pre_out_cnt.append(pre_outflow_map[scale].sum(axis=2).sum(axis=2).detach())
 
 
 
@@ -225,7 +207,6 @@ class Trainer():
 
 
 
-            # gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
             gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
 
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
@@ -237,8 +218,6 @@ class Trainer():
                 if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                    # gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
-                    #     = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                     gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
                         = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                 
@@ -253,42 +232,17 @@ class Trainer():
                                                                             self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
-            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
-            # overall loss
+            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
-            ############  gt confidence ################
-#             gt_confidence = self.generate_gt.get_confidence(masks, gt_mask_scales)
-            # assert confidence.shape == gt_confidence.shape
-            # bce_weight = torch.ones_like(gt_confidence)
-            # bce_weight[torch.where(gt_confidence==-1)] = 0
-            # confidence_loss = F.binary_cross_entropy(confidence, gt_confidence,weight=bce_weight, reduction="mean")
-
-
-            ############ generate final den and io flow ########
-            final_den, out_den, in_den, den_probs, io_probs, confidence = self.net.scale_fuse(den_scales, masks, confidence, 'train')
-            
-
-            # final_den = torch.sum(dens, dim=1).unsqueeze(1) / dens.shape[1]
-            # out_den = torch.sum(out_den, dim=1).unsqueeze(1) / out_den.shape[1]
-            # in_den = torch.sum(in_den, dim=1).unsqueeze(1) / in_den.shape[1]
-
-
-
-
-
-            ##############################################
+         
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales,masks, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
-            # warp_loss = self.net.deformable_alignment.warp_loss
-            
-            # all_loss = (kpi_loss + con_loss *cfg.con_alpha + 0*confidence_loss).sum()
             all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
 
-            # all_loss = (kpi_loss + con_loss *cfg.con_alpha + warp_loss * cfg.warp_alpha + scale_mask_loss * cfg.scale_mask_alpha).sum()
 
 
             # back propagate
@@ -301,24 +255,19 @@ class Trainer():
                 self.lr_scheduler_base.step(self.i_tb)
                 self.lr_scheduler_thre.step(self.i_tb)
 
-            # self.lr_scheduler.step()
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
             batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
             batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
             batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
-            # batch_loss['confidence'].update(confidence_loss.item())
-
-
-            # batch_loss['warp'].update(warp_loss.item())
 
 
 
 
             
 
-            if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
+             if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
           
                 self.writer.add_scalar('loss_den_overall',batch_loss['den'].avg, self.i_tb)
                 self.writer.add_scalar('loss_den',batch_loss['scale_den'].avg, self.i_tb)
@@ -326,8 +275,6 @@ class Trainer():
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
-                self.writer.add_scalar('loss_io_scale', batch_loss['scale_io'].avg, self.i_tb)
-
                 self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
 
 
@@ -340,24 +287,20 @@ class Trainer():
 
                 self.timer['iter time'].toc(average=False)
                
-                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_io %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
-                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['scale_io'].avg, batch_loss['in'].avg,
+                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                        (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['in'].avg,
                         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
 
 
 
             if (self.i_tb) % self.cfg.SAVE_VIS_FREQ == 0:
-                # save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
-                #                   img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), 
-                #                   den[0].detach().cpu().numpy() , gt_den[0].detach().cpu().numpy(), den[1].detach().cpu().numpy(), gt_den[1].detach().cpu().numpy() , \
-                #                   (mask[0,:,:,:]).detach().cpu().numpy(), gt_mask[0,0:1,:,:].detach().cpu().numpy(), \
-                #                   (mask[img.size(0)//2,:,:,:]).detach().cpu().numpy(), gt_mask[0,1:2,:,:].detach().cpu().numpy(),\
-                #                   f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales)
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
+                                    [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
+                                    [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+
 
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
@@ -395,10 +338,6 @@ class Trainer():
                     
                     img = torch.stack(img,0).cuda()
                     img_pair_num = img.shape[0]//2
-       
-
-                    
-                    
  
                     
                     b, c, h, w = img.shape
@@ -421,9 +360,8 @@ class Trainer():
                     
                     else:
 
-                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+                        den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
 
-                        final_den, out_den, in_den, den_probs, io_probs, _ = self.net.scale_fuse(den_scales, masks, confidence, 'val')
                         
 
 
@@ -464,7 +402,6 @@ class Trainer():
                             if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                                 match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                                # gt_io_map, gt__gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                                 gt_io_map, gt_in_cnt, gt_out_cnt \
                                     = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
 
@@ -473,6 +410,9 @@ class Trainer():
                         
                         #    -----------Counting performance------------------
                         gt_count, pred_cnt = gt_den[0].sum().item(),  final_den[0].sum().item()
+                        print(gt_den.shape)
+                        print(final_den.shape)
+
 
                         
 
@@ -505,7 +445,6 @@ class Trainer():
                 scenes_gt_dict.append(gt_dict)
            
             MAE, MSE,WRAE, MIAE, MOAE, cnt_result =compute_metrics_all_scenes(scenes_pred_dict,scenes_gt_dict, 1)#cfg.VAL_INTERVALS)
-            # print('MAE: %.2f, MSE: %.2f  WRAE: %.2f' % (MAE.data, MSE.data, WRAE.data))
             print('MAE: %.2f, MSE: %.2f  WRAE: %.2f WIAE: %.2f WOAE: %.2f' % (MAE.data, MSE.data, WRAE.data, MIAE.data, MOAE.data))
             print('Pre vs GT:', cnt_result)
             mae = sing_cnt_errors['mae'].avg
