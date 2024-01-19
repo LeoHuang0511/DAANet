@@ -267,7 +267,7 @@ class Trainer():
 
             
 
-             if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
+            if (self.i_tb) % self.cfg.PRINT_FREQ == 0:
           
                 self.writer.add_scalar('loss_den_overall',batch_loss['den'].avg, self.i_tb)
                 self.writer.add_scalar('loss_den',batch_loss['scale_den'].avg, self.i_tb)
