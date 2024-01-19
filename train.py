@@ -46,7 +46,7 @@ class Trainer():
             {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
         
         ]
         
@@ -664,7 +664,7 @@ if __name__=='__main__':
 
     #_test or val
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
-    parser.add_argument('--VAL_START', type=int, default=999)
+    parser.add_argument('--VAL_START', type=int, default=1)
 
     # parser.add_argument('--VAL_INTERVALS', type=int, default=75)
     # parser.add_argument('--ADJ_SCALES', type=int, nargs='+', default=[1])
@@ -712,7 +712,6 @@ if __name__=='__main__':
     cfg.mode = 'train'
 
     if cfg.DATASET == "SENSE":
-        cfg.MEAN_STD = ([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.])
         cfg.TRAIN_FRAME_INTERVALS = [5,12]
 
     cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2

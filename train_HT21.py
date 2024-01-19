@@ -47,7 +47,7 @@ class Trainer():
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
-            
+        
         ]
         
 
@@ -73,7 +73,7 @@ class Trainer():
             self.train_record = latest_state['train_record']
             self.exp_path = latest_state['exp_path']
             self.exp_name = latest_state['exp_name']
-            # self.cfg = latest_state['cfg']
+            self.cfg = latest_state['cfg']
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -134,7 +134,7 @@ class Trainer():
         self.timer={'iter time': Timer(), 'train time': Timer(), 'val time': Timer()}
         self.num_iters = self.cfg.MAX_EPOCH * np.int64(len(self.train_loader))
         # self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
-        self.compute_kpi_loss = ComputeKPILoss(self, cfg)
+        self.compute_kpi_loss = ComputeKPILoss(self,cfg)
 
         self.generate_gt = GenerateGT(cfg)
         self.feature_scale = cfg.feature_scale
@@ -239,7 +239,7 @@ class Trainer():
             
             gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
-           
+         
 
             
             kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
@@ -311,6 +311,8 @@ class Trainer():
                                     [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
                                     [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
 
+
+
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
                 self.timer['val time'].tic()
                 if self.cfg.task == "SP":
@@ -321,6 +323,7 @@ class Trainer():
                 self.timer['val time'].toc(average=False)
                 print('val time: {:.2f}s'.format(self.timer['val time'].diff))
             
+
 
 
     def validate(self):
@@ -672,7 +675,6 @@ if __name__=='__main__':
 
 
     parser.add_argument('--DEN_FACTOR', type=float, default=200.)
-    # parser.add_argument('--MEAN_STD', type=tuple, default=([0.3467, 0.5197, 0.4980], [0.2125, 0.0232, 0.0410]))
     parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
     
 
