@@ -109,10 +109,10 @@ class SMDCANet(nn.Module):
         dens = torch.sum(dens * confidences, dim=1).unsqueeze(1)
 
 
-        
-        feature =torch.cat([feature[0] * confidences[:,0,:,:].unsqueeze(1),  \
-                            F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * confidences[:,1,:,:].unsqueeze(1),
-                            F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * confidences[:,2,:,:].unsqueeze(1)], dim=1)
+        conf = F.adaptive_avg_pool2d(confidences, output_size=feature[0].shape[2:])
+        feature =torch.cat([feature[0] * conf[:,0,:,:].unsqueeze(1),  \
+                            F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * conf[:,1,:,:].unsqueeze(1),
+                            F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * conf[:,2,:,:].unsqueeze(1)], dim=1)
 
 
 
@@ -146,7 +146,7 @@ class SMDCAlignment(nn.Module):
 
         self.feature_head = nn.Sequential(
                                 nn.Dropout2d(0.2),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
 
                                 nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
@@ -156,7 +156,7 @@ class SMDCAlignment(nn.Module):
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
+        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 

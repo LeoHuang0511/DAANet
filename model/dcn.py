@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 class DeformableConv2d(nn.Module):
     def __init__(self,
+                 cfg,
                  in_channels,
                  out_channels,
                  offset_groups = 4,
@@ -18,6 +19,8 @@ class DeformableConv2d(nn.Module):
                  ):
 
         super(DeformableConv2d, self).__init__()
+
+        self.cfg = cfg
         
         assert type(kernel_size) == tuple or type(kernel_size) == int
 
@@ -89,7 +92,7 @@ class DeformableConv2d(nn.Module):
                                           stride=self.stride,
                                           )
                                           
-        offset_vis = offset_visualization(offset_visualization(offset_v, 1 //( self.cfg.feature_scale)))
+        offset_vis = offset_visualization(offset_map, 1 //( self.cfg.feature_scale))
         return x, offset_vis
 
 class MultiColumnOffsetConv(nn.Module):
@@ -114,7 +117,7 @@ class MultiColumnOffsetConv(nn.Module):
         )
         self.conv2 = nn.Conv2d(in_dim//2*3, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         
-        self.offset_conv = nn.Conv2d(in_dim//2*3, 
+        self.offset_conv = nn.Conv2d(in_dim//2, 
                                 2 * kernel_size[0] * kernel_size[1], 
                                 kernel_size=3, 
                                 dilation=1, 
