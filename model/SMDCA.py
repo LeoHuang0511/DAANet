@@ -150,7 +150,7 @@ class SMDCAlignment(nn.Module):
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
 
                                 nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
-                                BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
+                                nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
                                 nn.ReLU(inplace=True),
                                 nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
         )
