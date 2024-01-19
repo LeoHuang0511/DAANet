@@ -110,14 +110,26 @@ class SMDCANet(nn.Module):
         dens = torch.sum(dens * confidences, dim=1).unsqueeze(1)
 
 
-        conf = F.adaptive_avg_pool2d(confidences, output_size=feature[0].shape[2:])
-        feature =torch.cat([feature[0] * conf[:,0,:,:].unsqueeze(1),  \
-                            F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * conf[:,1,:,:].unsqueeze(1),
-                            F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * conf[:,2,:,:].unsqueeze(1)], dim=1)
+        # conf = F.adaptive_avg_pool2d(confidences, output_size=feature[0].shape[2:])
+        # feature =torch.cat([feature[0] * conf[:,0,:,:].unsqueeze(1),  \
+        #                     F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * conf[:,1,:,:].unsqueeze(1),
+        #                     F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * conf[:,2,:,:].unsqueeze(1)], dim=1)
+
+        feature1 = []
+        feature2 = []
+        for scale in range(len(feature)):
+            
+            conf = confidences[:,scale,:,:].unsqueeze(1)
+            conf = F.adaptive_avg_pool2d(conf, feature[scale].shape[2:])
 
 
+    
+            feature[scale] = conf * feature[scale]
+            feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
+            feature2.append(feature[scale][1::2,:,:,:])
+        
 
-        f, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature)
+        f, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature1, feature2)
         mask = self.mask_predict_layer(f)
 
 
@@ -171,12 +183,19 @@ class SMDCAlignment(nn.Module):
      
 
 
-    def forward(self, f):
+    def forward(self, f1, f2):
 
         
-        f = self.feature_head(f)
-        f1 = f[0::2,:,:,:]
-        f2 = f[1::2,:,:,:]
+        # f = self.feature_head(f)
+        # f1 = f[0::2,:,:,:]
+        # f2 = f[1::2,:,:,:]
+        f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+
+        f1 = self.feature_head(f1)
+        f2 = self.feature_head(f2)
 
 
         f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
