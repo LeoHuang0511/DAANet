@@ -130,7 +130,9 @@ class MultiColumnOffsetConv(nn.Module):
 
     def forward(self, x):
         # x1 = self.conv1(x)
-        x2 = torch.cat([self.column1(x1), self.column2(x1), self.column3(x1)], dim=1)
+        # x2 = torch.cat([self.column1(x1), self.column2(x1), self.column3(x1)], dim=1)
+        x2 = torch.cat([self.column1(x), self.column2(x), self.column3(x)], dim=1)
+
         # x2 = self.conv2(x2)
         # x3 = self.offset_conv(x1 + x2)
         x3 = self.offset_conv(x2)
