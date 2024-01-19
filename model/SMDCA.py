@@ -156,7 +156,7 @@ class SMDCAlignment(nn.Module):
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(channel_size*2, channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
+        self.multi_scale_dcn_alignment = DeformableConv2d(self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 
