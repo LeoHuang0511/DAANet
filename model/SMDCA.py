@@ -102,7 +102,8 @@ class SMDCANet(nn.Module):
         
         dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
 
-        confidences = self.confidence_predict_layer(torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1))
+        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
+        confidences = self.confidence_predict_layer(f_con)
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
         confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
 
@@ -145,23 +146,25 @@ class SMDCAlignment(nn.Module):
         self.channel_size = num_feat
 
         self.feature_head = nn.Sequential(
-                                nn.Dropout2d(0.2),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                # nn.Dropout2d(0.2),
+                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                # ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
 
-                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
-                                nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
-                                nn.ReLU(inplace=True),
-                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
+                                # nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
+                                # nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
+                                # nn.ReLU(inplace=True),
+                                # nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
+        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
