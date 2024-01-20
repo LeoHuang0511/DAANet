@@ -162,10 +162,8 @@ def test(cfg, cfg_data):
 
                     if frame_signal == 'match' or not cfg.skip_flag:
 
-                        # pred_map, pre_mask, pre_outflow_map, pre_inflow_map, f_flow, b_flow, _, _,attn_1, attn_2 = net(img)
-                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                        den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
 
-                        pred_map, out_den, in_den, den_probs, io_probs, confidence = net.scale_fuse(den_scales, masks, confidence, 'val')
                         pre_inflow, pre_outflow = \
                             in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
                         # save_inflow_outflow_density(img, matched_results['scores'], matched_results['pre_points'],
@@ -203,7 +201,7 @@ def test(cfg, cfg_data):
 
                                 gt_io_map, gt_in_cnt, gt_out_cnt \
                                     = generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
-                        gt_mask_scales = generate_gt.get_scale_io_masks( gt_io_map, scale_num=len(masks))
+                        gt_mask_scales = generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
                          #    -----------Counting performance------------------
                         gt_count, pred_cnt = gt_den[0].sum().item(),  pred_map[0].sum().item()
@@ -236,19 +234,13 @@ def test(cfg, cfg_data):
 
                         img_pair_idx+=1
             
-                        if img_pair_idx % cfg.save_freq == 0:
-                            # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform,\
-                            #         img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0), pred_map[0].detach().cpu().numpy() , \
-                            #         torch.ones_like(pred_map[0]).detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(), torch.ones_like( pred_map[1]).detach().cpu().numpy(),\
-                            #         pre_mask[0,:,:,:].detach().cpu().numpy(), torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                            #         pre_mask[img.size(0)//2,:,:,:].detach().cpu().numpy(),torch.ones_like( pre_mask[0,:,:,:]).detach().cpu().numpy(),\
-                            #         f_flow[0].permute(1,2,0).detach().cpu().numpy(),b_flow[0].permute(1,2,0).detach().cpu().numpy(),\
-                            #         attn_1[0].detach().cpu().numpy(), attn_2[0].detach().cpu().numpy())
-                            save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals),restore_transform, 0, 
-                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                    pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
+                        # if img_pair_idx % cfg.save_freq == 0:
+                            # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform, 0, 
+                            #         img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                            #         pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                            #         (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                            #         [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
+                            #         [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
     #                     kpts0 = matched_results['pre_points'][0][:, 2:4].cpu().numpy()
     #                     kpts1 = matched_results['pre_points'][1][:, 2:4].cpu().numpy()
 
