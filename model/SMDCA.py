@@ -43,8 +43,8 @@ class SMDCANet(nn.Module):
             nn.ConvTranspose2d(8, 4, 2, stride=2, padding=0, output_padding=0, bias=False),
             nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
 
-            # nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
-            nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
+            # nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
             )
 
 
@@ -134,9 +134,12 @@ class SMDCANet(nn.Module):
 
 
 
-        mask_prob = torch.softmax(mask, dim=1)
-        den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
-        io_prob = mask_prob[:,1,:,:].unsqueeze(1)
+        # mask_prob = torch.softmax(mask, dim=1)
+        io_prob = torch.sigmoid(mask)
+        
+        # den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
+        # io_prob = mask_prob[:,1,:,:].unsqueeze(1)
+
 
         out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
         in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
