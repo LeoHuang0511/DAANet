@@ -135,21 +135,23 @@ class SMDCANet(nn.Module):
 
 
         # mask_prob = torch.softmax(mask, dim=1)
-        io_prob = torch.sigmoid(mask)
+        mask = torch.sigmoid(mask)
         
         # den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
         # io_prob = mask_prob[:,1,:,:].unsqueeze(1)
 
 
-        out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
-        in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
+        # out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
+        # in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
+        out_den = dens[0::2,:,:,:] * mask[:img_pair_num,:,:,:]
+        in_den = dens[1::2,:,:,:] * mask[img_pair_num:,:,:,:]
 
 
 
 
         # return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
         # return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
-        return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, f1, f2, attn_1, attn_2
+        return  den_scales, dens, mask, out_den, in_den, mask, mask, confidences, flow, back_flow, f1, f2, attn_1, attn_2
 
 
 

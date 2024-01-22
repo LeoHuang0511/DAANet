@@ -60,12 +60,10 @@ class GenerateGT():
         b, c, h, w = gt_mask.shape
         # mask
         gt_mask_scales = []
-        # print((gt_mask>0).Float().cuda())
 
-        # gt_mask = gt_mask.view(b*2, h, w)
-        gt_mask = gt_mask.view(b*c, h, w)
+        # gt_mask = gt_mask.view(b*c, h, w)
 
-        gt_mask_scales.append(gt_mask>0)
+        gt_mask_scales.append((gt_mask>0).float())
 
 
         # for scale in range(0,scale_num):

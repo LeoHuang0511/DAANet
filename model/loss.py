@@ -74,8 +74,8 @@ class ComputeKPILoss(object):
 
         # self.mask_loss_scales = F.cross_entropy(masks[:img_pair_num], gt_masks[0][:,0,:,:],weight=self.mask_class_weight, reduction = "mean")\
         #                         +F.cross_entropy(masks[img_pair_num:], gt_masks[0][:,1,:,:],weight=self.mask_class_weight, reduction = "mean")
-        self.mask_loss_scales = F.binary_cross_entropy(mask[:img_pair_num], gt_mask[:,0:1,:,:],reduction = "mean") + \
-                               F.binary_cross_entropy(mask[img_pair_num:], gt_mask[:,1:2,:,:],reduction = "mean")
+        self.mask_loss_scales = F.binary_cross_entropy(masks[:img_pair_num], gt_masks[0][:,0:1,:,:],reduction = "mean") + \
+                               F.binary_cross_entropy(masks[img_pair_num:], gt_masks[0][:,1:2,:,:],reduction = "mean")
         # # # inflow/outflow loss
         
         self.in_loss, self.out_loss = self.compute_io_loss(pre_outflow_map, pre_inflow_map, gt_masks, gt_den_scales)

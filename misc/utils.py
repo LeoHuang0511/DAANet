@@ -220,15 +220,15 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
 
             ########## mask ###############
-            # mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
-            # mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
+            mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
+            mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
             
 
             # mask_out_scale_1 = np.argmax(mask[i][0,:,:,:].detach().cpu().numpy(), axis=0)
             # mask_in_scale_1 =  np.argmax(mask[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy(),axis=0)
             
-            # gt_mask_out_scale_1 = gt_mask[i][0,0:1,:,:].detach().cpu().numpy()
-            # gt_mask_in_scale_1 = gt_mask[i][0,1:2,:,:].detach().cpu().numpy()
+            gt_mask_out_scale_1 = gt_mask[i][0,0:1,:,:].detach().cpu().numpy()
+            gt_mask_in_scale_1 = gt_mask[i][0,1:2,:,:].detach().cpu().numpy()
 
             # mask_out_scale_1 = cv2.resize(COLOR_MAP[mask_out_scale_1].squeeze(),  (UNIT_W, UNIT_H))
             # mask_in_scale_1 = cv2.resize(COLOR_MAP[mask_in_scale_1].squeeze(),  (UNIT_W, UNIT_H))
