@@ -119,10 +119,12 @@ class MultiColumnOffsetConv(nn.Module):
         
         self.offset_conv = nn.Conv2d(int((in_dim//2)*3), 
                                 2 * kernel_size[0] * kernel_size[1], 
-                                kernel_size=3, 
+                                # kernel_size=3,
+                                kernel_size=1, 
                                 dilation=1, 
                                 stride=stride, 
-                                padding=1,
+                                # padding=1,
+                                padding=0,
                                 bias=True)
 
         nn.init.constant_(self.offset_conv.weight, 0.)
