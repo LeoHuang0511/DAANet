@@ -136,7 +136,7 @@ class ComputeKPILoss(object):
 #         loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
         # loss = scale_loss + self.mask_loss_scales.sum() + self.out_loss_scales.sum() + self.in_loss_scales.sum() + \
         #     avg_dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
-        loss = (1-avg_dynamic_weight)*scale_loss + self.mask_loss_scales.sum() + \
+        loss = scale_loss + self.mask_loss_scales.sum() + \
             avg_dynamic_weight * (self.cnt_loss*10 + (self.in_loss + self.out_loss))
         
         return loss
@@ -249,8 +249,8 @@ class ComputeKPILoss(object):
        
         
         
-        out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')/  self.cfg.TRAIN_BATCH_SIZE
-        in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')/  self.cfg.TRAIN_BATCH_SIZE
+        out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')
+        in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')
 
 
         # in_loss, out_loss = torch.zeros(len(gt_dens)).cuda(), torch.zeros(len(gt_dens)).cuda()
