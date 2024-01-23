@@ -137,7 +137,7 @@ class ComputeKPILoss(object):
         # loss = scale_loss + self.mask_loss_scales.sum() + self.out_loss_scales.sum() + self.in_loss_scales.sum() + \
         #     avg_dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
         loss = scale_loss + self.mask_loss_scales.sum() + \
-            avg_dynamic_weight * (self.cnt_loss*10 + (self.in_loss + self.out_loss))
+            avg_dynamic_weight * (self.cnt_loss*10 ) + (self.in_loss + self.out_loss)
         
         return loss
 
