@@ -219,8 +219,8 @@ class Trainer():
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
                     gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
-                        = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
-                
+                        = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                        # = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)                
                     # contrastive loss
                     if len(match_gt['a2b'][:, 0]) > 0:
 
@@ -403,18 +403,15 @@ class Trainer():
                                 match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
                                 gt_io_map, gt_in_cnt, gt_out_cnt \
-                                    = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
+                                    = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
+                                    # = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
 
 
                         
                         
                         #    -----------Counting performance------------------
                         gt_count, pred_cnt = gt_den[0].sum().item(),  final_den[0].sum().item()
-                        print(gt_den.shape)
-                        print(final_den.shape)
-
-
-                        
+                                              
 
                         s_mae = abs(gt_count - pred_cnt)
                         s_mse = ((gt_count - pred_cnt) * (gt_count - pred_cnt))
@@ -482,50 +479,64 @@ class Trainer():
 
                 target = flat_target
                 img = torch.cat(img,0).cuda()
+                
                 img_pair_num = img.shape[0]//2
-                for i in range(len(target)):
-                    for key,data in target[i].items():
-                        if torch.is_tensor(data):
-                            target[i][key]=data.cuda()
                 
                     
-                den, _, pre_outflow_map, pre_inflow_map, _, _, _ = self.net(img)
+                den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+                    
 
+
+                target_ratio = final_den.shape[2]/img.shape[2]
+
+                for b in range(len(target)):
+                    target[b]["points"] = target[b]["points"] * target_ratio
+                    target[b]["sigma"] = target[b]["sigma"] * target_ratio
+                    
+                    for key,data in target[b].items():
+                        if torch.is_tensor(data):
+                            target[b][key]=data.cuda()
                 #    -----------gt generate & loss computation------------------
-                gt_den = self.generate_gt.get_den(den.shape, target)
+                gt_den_scales = self.generate_gt.get_den(den_scales[0].shape, target, target_ratio, scale_num=len(den_scales))
+                gt_den = gt_den_scales[0]
                 
-                gt_mask = torch.zeros(img_pair_num, 2, den.size(2), den.size(3)).cuda()
-                assert den.size() == gt_den.size()
+                assert final_den.size() == gt_den.size()
+
+                
+                gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+
                 gt_in_cnt = torch.zeros(img_pair_num).detach()
                 gt_out_cnt = torch.zeros(img_pair_num).detach()
+
+
                 for pair_idx in range(img_pair_num):
                     count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                     
                     if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
                         match_gt, _ = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
-                        gt_mask, _, _ \
-                            = self.generate_gt.get_io_mask(pair_idx, target, match_gt, gt_mask, gt_out_cnt, gt_in_cnt)
+                        gt_io_map, gt_in_cnt, gt_out_cnt \
+                            = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
+                            # = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                         
-                gt_outflow_map = gt_mask[:,0:1,:,:]* (gt_den[0::2,:,:,:].detach()) #* (mask[:,0:1,:,:] >= 0.8)
-                gt_inflow_map = gt_mask[:,1:2,:,:] * (gt_den[1::2,:,:,:].detach()) #* (mask[:,1:2,:,:] >= 0.8)
+                gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
-
-                
 
                 #    -----------Density map performance------------------
-        
-                s_den_mae = torch.sum(torch.abs(gt_den - den)).item()
-                s_den_mse = F.mse_loss(den, gt_den, reduction='sum').item()
+
+                s_den_mae = torch.sum(torch.abs(gt_den[0] -  final_den[0])).item()
+                s_den_mse = F.mse_loss( final_den[0], gt_den[0], reduction='sum').item()
                 sing_cnt_errors['den_mae'].update(s_den_mae)
                 sing_cnt_errors['den_mse'].update(s_den_mse)
 
                 #    -----------Flow performance------------------
+                gt_outflow_map = ((gt_mask_scales[0][:,0:1,:,:] == 1) * den_scales[0][0::2,:,:,:] ).cuda()
+                gt_inflow_map = ((gt_mask_scales[0][:,1:2,:,:] == 1) * den_scales[0][1::2,:,:,:] ).cuda()
                 
-                sing_cnt_errors['in_mae'].update(torch.sum(torch.abs(gt_inflow_map - pre_inflow_map)).item())
-                sing_cnt_errors ['in_mse'].update(F.mse_loss(pre_inflow_map, gt_inflow_map,reduction='sum').item())
-                sing_cnt_errors['out_mae'].update(torch.sum(torch.abs(gt_outflow_map - pre_outflow_map)).item())
-                sing_cnt_errors ['out_mse'].update(F.mse_loss(pre_outflow_map, gt_outflow_map,reduction='sum').item())
+                sing_cnt_errors['in_mae'].update(torch.sum(torch.abs(gt_inflow_map - in_den)).item())
+                sing_cnt_errors ['in_mse'].update(F.mse_loss(in_den, gt_inflow_map,reduction='sum').item())
+                sing_cnt_errors['out_mae'].update(torch.sum(torch.abs(gt_outflow_map - out_den)).item())
+                sing_cnt_errors ['out_mse'].update(F.mse_loss(out_den, gt_outflow_map,reduction='sum').item())
 
 
             den_mae = sing_cnt_errors['den_mae'].avg
@@ -535,10 +546,18 @@ class Trainer():
             out_mae = sing_cnt_errors['out_mae'].avg
             out_mse =  np.sqrt(sing_cnt_errors['out_mse'].avg)
 
+            self.writer.add_scalar('den_mae',den_mae, self.i_tb)
+            self.writer.add_scalar('den_mse',den_mse, self.i_tb)
+            self.writer.add_scalar('in_mae', in_mae, self.i_tb)
+            self.writer.add_scalar('in_mse', in_mse, self.i_tb)
+            self.writer.add_scalar('out_mae', out_mae, self.i_tb)
+            self.writer.add_scalar('out_mse', out_mse, self.i_tb)
+
+
            
 
             self.train_record = update_model(self,{'den_mae':den_mae, 'den_mse':den_mse, 'in_mae':in_mae, 'in_mse':in_mse,\
-                                                'out_mae':out_mae, 'out_mse':out_mse})
+                                                'out_mae':out_mae, 'out_mse':out_mse}, val=True)
 
             print_NWPU_summary_det(self,{'den_mae':den_mae, 'den_mse':den_mse, 'in_mae':in_mae, 'in_mse':in_mse,\
                                                 'out_mae':out_mae, 'out_mse':out_mse})

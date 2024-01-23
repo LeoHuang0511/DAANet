@@ -225,10 +225,18 @@ class ShiftPretrainDataset(data.Dataset):
 
         
 
-        img1 = read_LAB_image(self.imgs_path[index])
-        img2 = read_LAB_image(self.imgs_path[result[0]])
-        img3 = read_LAB_image(self.imgs_path[result[1]])
-        img4 = read_LAB_image(self.imgs_path[result[2]])
+        img1 = Image.open(self.imgs_path[index])
+        img2 = Image.open(self.imgs_path[result[0]])
+        img3 = Image.open(self.imgs_path[result[1]])
+        img4 = Image.open(self.imgs_path[result[2]])
+        if img1.mode != 'RGB':
+            img1=img1.convert('RGB')
+        if img2.mode != 'RGB':
+            img2 = img2.convert('RGB')
+        if img3.mode != 'RGB':
+            img3=img3.convert('RGB')
+        if img4.mode != 'RGB':
+            img4 = img4.convert('RGB')
 
         target1 = self.labels[index].copy()
         target2 = self.labels[result[0]].copy()
