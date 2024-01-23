@@ -30,7 +30,6 @@ class SMDCANet(nn.Module):
 
             nn.Dropout2d(0.2),
 
-            ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
                 
@@ -124,7 +123,7 @@ class SMDCANet(nn.Module):
 
 
     
-            feature[scale] = conf * feature[scale]
+            feature[scale] = conf.detach() * feature[scale]
             feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
             feature2.append(feature[scale][1::2,:,:,:])
         
