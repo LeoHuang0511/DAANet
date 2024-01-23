@@ -143,8 +143,9 @@ class SMDCANet(nn.Module):
 
         # out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
         # in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
-        out_den = dens[0::2,:,:,:] * mask[:img_pair_num,:,:,:]
-        in_den = dens[1::2,:,:,:] * mask[img_pair_num:,:,:,:]
+        
+        out_den = dens[0::2,:,:,:].detach() * mask[:img_pair_num,:,:,:]
+        in_den = dens[1::2,:,:,:].detach() * mask[img_pair_num:,:,:,:]
 
 
 

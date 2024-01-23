@@ -240,12 +240,12 @@ class Trainer():
                                                                             self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
-            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
+            gt_mask = (gt_io_map>0).float()
 
          
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
@@ -312,7 +312,7 @@ class Trainer():
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
-                                    [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+                                    [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
 
 
 

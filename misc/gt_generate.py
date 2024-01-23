@@ -56,54 +56,7 @@ class GenerateGT():
         assert shape == dot_map.shape
 
         return dot_map
-    def get_scale_io_masks(self, gt_mask, scale_num):
-        b, c, h, w = gt_mask.shape
-        # mask
-        gt_mask_scales = []
-
-        # gt_mask = gt_mask.view(b*c, h, w)
-
-        gt_mask_scales.append((gt_mask>0).float())
-
-
-        # for scale in range(0,scale_num):
-        #     # for i in range(b*2):
-        #     for i in range(b*c):
-
-        #         # multi-scale density gt
-        #         gt_mask_np = gt_mask[i].detach().cpu().numpy().squeeze().copy()
-        #         if scale == 0:
-        #             mask = gt_mask_np
-        #         else:
-        #             mask = cv2.resize(gt_mask_np,(int(gt_mask_np.shape[1]/(2**scale)),int(gt_mask_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* ((2**scale)**2)
-                
-        #         if i == 0:
-        #             maskgt = np.expand_dims(mask,0)
-
-        #         else:
-        #             maskgt = np.vstack((maskgt,np.expand_dims(mask,0)))
-            
-        #     maskgt = torch.Tensor(maskgt>0).view(b,c,h//(2**scale),w//(2**scale)).cuda()
-        #     # maskgt[:,2,:,:] *= 2.
-
-        #     seggt = torch.zeros((maskgt.shape[0],2,maskgt.shape[2],maskgt.shape[3])).cuda()
-        #     seggt[:,0,:,:][maskgt[:,2,:,:].bool()] = 2
-        #     seggt[:,0,:,:][maskgt[:,0,:,:].bool()] = 1 
-            
-        #     seggt[:,1,:,:][maskgt[:,3,:,:].bool()] = 2
-        #     seggt[:,1,:,:][maskgt[:,1,:,:].bool()] = 1
-            
-
-            
-
-
-
-        #     # gt_mask_scales.append(maskgt)
-        #     gt_mask_scales.append(seggt.long())
-
-
-
-        return gt_mask_scales
+   
     
     
 
@@ -128,8 +81,7 @@ class GenerateGT():
             # mask_in[0, 0, target[pair_idx * 2+1]['points'][in_ind, 1].long(), target[pair_idx * 2+1]['points'][in_ind, 0].long()] = 1  
             mask_in[0, 0, (target[pair_idx * 2+1]['points'][in_ind, 1] * ratio).long(), (target[pair_idx * 2+1]['points'][in_ind, 0] * ratio).long()] = 1  
 
-        # mask_out = self.generate_mask(mask_out)
-        # mask_in = self.generate_mask(mask_in)
+        
         mask_out = self.Gaussian(mask_out)
         mask_in = self.Gaussian(mask_in)
 
