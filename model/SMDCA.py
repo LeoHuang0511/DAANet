@@ -43,7 +43,6 @@ class SMDCANet(nn.Module):
             nn.BatchNorm2d(4, momentum=BN_MOMENTUM),
 
             nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
-            # nn.Conv2d(4, 3, kernel_size=1, stride=1, padding=0),
             )
 
 
