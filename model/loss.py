@@ -249,8 +249,8 @@ class ComputeKPILoss(object):
        
         
         
-        out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')
-        in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')
+        out_loss = F.mse_loss(pre_outflow_map, gt_outflow_map,reduction = 'sum')/self.cfg.TRAIN_BATCH_SIZE
+        in_loss = F.mse_loss(pre_inflow_map, gt_inflow_map, reduction='sum')/self.cfg.TRAIN_BATCH_SIZE
 
 
         # in_loss, out_loss = torch.zeros(len(gt_dens)).cuda(), torch.zeros(len(gt_dens)).cuda()
