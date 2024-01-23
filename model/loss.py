@@ -109,7 +109,7 @@ class ComputeKPILoss(object):
         # return weight*loss
         
         # scale_loss = 10*self.cnt_loss_scales.sum()
-        scale_loss = self.cnt_loss_scales.sum()
+        scale_loss = 0.1 * self.cnt_loss_scales.sum()
 
         
 #         if self.trainer.i_tb == self.cfg.Dynamic_freq:
