@@ -238,7 +238,7 @@ class Trainer():
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
                                                                             self.feature_scale)
-            # con_loss /= cfg.TRAIN_BATCH_SIZE
+            con_loss /= cfg.TRAIN_BATCH_SIZE
             
             gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
