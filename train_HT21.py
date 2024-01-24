@@ -610,6 +610,8 @@ if __name__=='__main__':
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
+    parser.add_argument('--backbone', type=str, default='vgg')
+
 
 
 
@@ -686,6 +688,7 @@ if __name__=='__main__':
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
     cfg.EXP_NAME = now \
+    + '_' + cfg.backbone\
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
     + '_' + str(cfg.LR_Base)\

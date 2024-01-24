@@ -18,15 +18,24 @@ class VGG16_FPN(nn.Module):
         super(VGG16_FPN, self).__init__()
 
         self.cfg = cfg
-        vgg = models.vgg16_bn(weights='VGG16_BN_Weights.IMAGENET1K_V1')
+        if cfg.backbone == "swin":
+            swin = models.swin_v2_b(weights='Swin_V2_B_Weights.IMAGENET1K_V1')
+            features = list(swin.features.children())
+            self.layer1 = nn.Sequential(*features[0:2])
+            self.layer2 = nn.Sequential(*features[2:4])
+            self.layer3 = nn.Sequential(*features[4:6])
 
-        features = list(vgg.features.children())
+            in_channels = [128,256,512]
+            
 
-        self.layer1 = nn.Sequential(*features[0:23])
-        self.layer2 = nn.Sequential(*features[23:33])
-        self.layer3 = nn.Sequential(*features[33:43])
+        elif cfg.backbone == "vgg":
+            vgg = models.vgg16_bn(weights='VGG16_BN_Weights.IMAGENET1K_V1')
+            features = list(vgg.features.children())
+            self.layer1 = nn.Sequential(*features[0:23])
+            self.layer2 = nn.Sequential(*features[23:33])
+            self.layer3 = nn.Sequential(*features[33:43])
 
-        in_channels = [256,512,512]
+            in_channels = [256,512,512]
         self.neck = FPN(in_channels,192,len(in_channels))
 
         self.neck2f = FPN(in_channels, 128, len(in_channels))
@@ -85,10 +94,15 @@ class VGG16_FPN(nn.Module):
     def forward(self, x):
         f_list = []
         x1 = self.layer1(x)
-        f_list.append(x1)
         x2 = self.layer2(x1)
-        f_list.append(x2)
         x3 = self.layer3(x2)
+        if self.cfg.backbone == 'swin':
+            x1 = x1.permute(0,3,1,2)
+            x2 = x2.permute(0,3,1,2)
+            x3 = x3.permute(0,3,1,2)
+
+        f_list.append(x1)
+        f_list.append(x2)
         f_list.append(x3)
 
 
