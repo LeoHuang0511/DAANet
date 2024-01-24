@@ -677,7 +677,7 @@ if __name__=='__main__':
 
 
     parser.add_argument('--DEN_FACTOR', type=float, default=200.)
-    parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
+    parser.add_argument('--MEAN_STD', type=tuple, default=([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]))
     
 
     cfg = parser.parse_args()
