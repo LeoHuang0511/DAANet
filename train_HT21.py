@@ -688,7 +688,9 @@ if __name__=='__main__':
     cfg.EXP_NAME = now \
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
-    + '_' + str(cfg.LR_Base)
+    + '_' + str(cfg.LR_Base)\
+    + '_' + str(cfg.LR_Thre)
+
 
     cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.task)  # the path of logs, checkpoints, and current codes
     
