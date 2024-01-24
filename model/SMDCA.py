@@ -117,12 +117,15 @@ class SMDCANet(nn.Module):
         feature2 = []
         for scale in range(len(feature)):
             
-            conf = confidences[:,scale,:,:].unsqueeze(1)
+            conf = confidences[:,scale,:,:].detach().unsqueeze(1)
             conf = F.adaptive_avg_pool2d(conf, feature[scale].shape[2:])
 
 
     
-            feature[scale] = F.sigmoid(conf).detach() * feature[scale]
+            feature[scale] = F.sigmoid(conf) * feature[scale]
+            # conf = (conf-conf.min())/(conf.max()-conf.min()+1e-7).detach()
+            # feature[scale] = conf * feature[scale]
+
             feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
             feature2.append(feature[scale][1::2,:,:,:])
         
@@ -164,25 +167,24 @@ class SMDCAlignment(nn.Module):
         self.feature_head = nn.Sequential(
                                 nn.Dropout2d(0.2),
 
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
-                                # nn.Dropout2d(0.2),
-                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-                                # ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
 
-                                # nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
-                                # nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
-                                # nn.ReLU(inplace=True),
-                                # nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
+                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
+                                nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
+                                nn.ReLU(inplace=True),
+                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True)
+        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
