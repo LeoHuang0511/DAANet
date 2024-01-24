@@ -162,8 +162,9 @@ class SMDCAlignment(nn.Module):
         self.channel_size = num_feat
 
         self.feature_head = nn.Sequential(
+                                nn.Dropout2d(0.2),
                                 ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn")
                                 # nn.Dropout2d(0.2),
                                 # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 # ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
@@ -175,12 +176,12 @@ class SMDCAlignment(nn.Module):
         )
 
         # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True)
+        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         
 
         self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
         )
 
