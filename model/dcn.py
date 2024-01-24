@@ -104,20 +104,20 @@ class MultiColumnOffsetConv(nn.Module):
         # self.conv1 =  nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
 
         self.column1 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
+            nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
+            # nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
         self.column2 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
+            nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
+            # nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
         self.column3 = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
-            nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
+            nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
+            # nn.Conv2d(in_dim, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         )
         # self.conv2 = nn.Conv2d(in_dim//2*3, in_dim//2, kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True)
         
-        self.offset_conv = nn.Conv2d(int((in_dim//2)*3), 
+        self.offset_conv = nn.Conv2d(int(2 * kernel_size[0] * kernel_size[1] *3), 
                                 2 * kernel_size[0] * kernel_size[1], 
                                 # kernel_size=3,
                                 kernel_size=1, 
