@@ -122,9 +122,10 @@ class SMDCANet(nn.Module):
 
 
     
-            feature[scale] = F.sigmoid(conf) * feature[scale]
-            # conf = (conf-conf.min())/(conf.max()-conf.min()+1e-7).detach()
-            # feature[scale] = conf * feature[scale]
+            # feature[scale] = F.sigmoid(conf) * feature[scale]
+            feature[scale] = conf * feature[scale]
+
+           
 
             feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
             feature2.append(feature[scale][1::2,:,:,:])
