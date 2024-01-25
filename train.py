@@ -524,7 +524,6 @@ class Trainer():
                             = self.generate_gt.get_pair_io_map(pair_idx, target, match_gt, gt_io_map, gt_out_cnt, gt_in_cnt, target_ratio)
                             # = self.generate_gt.get_pair_seg_map(pair_idx, target, match_gt, gt_io_map, gt_outflow_cnt, gt_inflow_cnt, target_ratio)
                         
-                gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
 
 
                 #    -----------Density map performance------------------
@@ -535,8 +534,8 @@ class Trainer():
                 sing_cnt_errors['den_mse'].update(s_den_mse)
 
                 #    -----------Flow performance------------------
-                gt_outflow_map = ((gt_mask_scales[0][:,0:1,:,:] == 1) * den_scales[0][0::2,:,:,:] ).cuda()
-                gt_inflow_map = ((gt_mask_scales[0][:,1:2,:,:] == 1) * den_scales[0][1::2,:,:,:] ).cuda()
+                gt_outflow_map = gt_io_map[:,0:1,:,:]
+                gt_inflow_map = gt_io_map[:,1:2,:,:]
                 
                 sing_cnt_errors['in_mae'].update(torch.sum(torch.abs(gt_inflow_map - in_den)).item())
                 sing_cnt_errors ['in_mse'].update(F.mse_loss(in_den, gt_inflow_map,reduction='sum').item())
