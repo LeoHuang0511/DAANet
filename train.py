@@ -78,25 +78,34 @@ class Trainer():
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
 
-        if self.cfg.PRETRAIN:
+        if self.cfg.PRETRAIN_PATH != '':
             state_dict = torch.load(self.cfg.PRETRAIN_PATH,map_location=self.device)
             
             model_dict = self.net.state_dict()
-            # load_dict = []
-            # load_weights = ["optical_defromable_layer","Extractor.layer1","Extractor.layer2","Extractor.layer3","Extractor.neck","Extractor.neck2f"]
-            # for k, v in state_dict.items():
-            #     for module in load_weights:
-            #         if module in k:
-            #             load_dict.append(k)
-            #             break
+            load_dict = []
+            load_weights = ["mask_predict_layer","scale_loc_head"]
+            for k, v in state_dict.items():
+                sign = 0
+                for module in load_weights:
+                    if module in k:
+                        sign += 1
+                        break
+                
+                if sign == 0:
+                    load_dict.append(k)
 
-            # print(f"Loading weights of {load_dict}......")
+            
 
-            # pretrain_weight = torch.load(self.cfg.PRETRAIN_PATH, map_location=self.device)
-            state_dict = {k:v for k,v in state_dict.items() if k in model_dict}
+            print(f"Loading weights except {load_dict}......")
+            pretrain_weight = torch.load(self.cfg.PRETRAIN_PATH, map_location=self.device)
+            list = {k:v for k,v in pretrain_weight.items() if k in load_dict}
 
-            model_dict.update(state_dict)
+            model_dict.update(list)
             self.net.load_state_dict(model_dict, strict=True)
+
+
+            print("Finish loading pretrained model")
+
             if cfg.FROZEN:
                 freeze_weights = ["Extractor.layer1","Extractor.layer2","Extractor.layer3","Extractor.neck","Extractor.neck2f"]
 
@@ -152,7 +161,7 @@ class Trainer():
     def train(self): # training for all datasets
 
         self.net.train()
-        if not cfg.PRETRAIN:
+        if self.cfg.PRETRAIN_PATH == '':
             lr1, lr2 = adjust_learning_rate(self.optimizer,
                                     self.epoch,
                                     self.cfg.LR_Base,
@@ -249,7 +258,8 @@ class Trainer():
             self.optimizer.zero_grad()
             all_loss.backward()
             self.optimizer.step()
-            if cfg.PRETRAIN:
+            if self.cfg.PRETRAIN_PATH != '':
+
                 lr1 = self.optimizer.param_groups[0]['lr']
                 lr2 = self.optimizer.param_groups[1]['lr']
                 self.lr_scheduler_base.step(self.i_tb)
@@ -645,7 +655,6 @@ if __name__=='__main__':
 
     parser.add_argument('--RESUME', default=False, action='store_true', help="resume previous training")
     parser.add_argument('--RESUME_PATH',type=str, default='')
-    parser.add_argument('--PRETRAIN', default=False, action='store_true', help="resume previous training")
     parser.add_argument('--PRETRAIN_PATH',type=str, default='')
     parser.add_argument('--FROZEN', default=False, action='store_true', help="frozen pretrained frontend weights")
 
