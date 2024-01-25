@@ -450,6 +450,8 @@ class Trainer():
             mae = sing_cnt_errors['mae'].avg
             mse = np.sqrt(sing_cnt_errors['mse'].avg)
 
+            self.writer.add_scalar('mae',mae, self.i_tb)
+            self.writer.add_scalar('mse',mse, self.i_tb)
             self.writer.add_scalar('seqMAE',MAE, self.i_tb)
             self.writer.add_scalar('seqMSE',MSE, self.i_tb)
             self.writer.add_scalar('WRAE', WRAE, self.i_tb)
