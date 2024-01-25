@@ -207,7 +207,7 @@ class Trainer():
 
 
 
-            gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+            gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
 
             gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
             gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
@@ -232,12 +232,12 @@ class Trainer():
                                                                             self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
-            gt_mask_scales = self.generate_gt.get_scale_io_masks( gt_io_map, scale_num=1)
+            gt_mask = (gt_io_map>0).float()
 
          
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask_scales,  out_den, in_den, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt)
             
 
 
@@ -294,12 +294,15 @@ class Trainer():
 
 
             if (self.i_tb) % self.cfg.SAVE_VIS_FREQ == 0:
+                
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
                                     [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
-                                    [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+                                    [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+
+
 
 
 
@@ -390,7 +393,7 @@ class Trainer():
                         
                         assert final_den.size() == gt_den.size()
 
-                        gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+                        gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
 
                         gt_in_cnt = torch.zeros(img_pair_num).detach()
                         gt_out_cnt = torch.zeros(img_pair_num).detach()
@@ -652,6 +655,8 @@ if __name__=='__main__':
     parser.add_argument('--task', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
+    parser.add_argument('--backbone', type=str, default='vgg')
+
 
 
 
