@@ -85,7 +85,7 @@ class Trainer():
             
             model_dict = self.net.state_dict()
             load_dict = []
-            load_weights = ["mask_predict_layer","scale_loc_head"]
+            load_weights = []
             for k, v in state_dict.items():
                 sign = 0
                 for module in load_weights:
