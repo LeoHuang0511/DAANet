@@ -19,13 +19,9 @@ class ComputeKPILoss(object):
 
         self.cfg = cfg
         self.trainer = trainer
-        KPI_dict = {}
-        for scale in range(scale_num):
-            KPI_dict[f"den{scale}"] =  ['gt_cnt', 'pre_cnt']
-            KPI_dict[f"mask{scale}"] =  ['gt_cnt', 'acc_cnt']
-
-
-        # self.task_KPI=Task_KPI_Pool(task_setting=KPI_dict, maximum_sample=1000)
+        
+        self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
+        
         self.DEN_FACTOR = cfg.DEN_FACTOR
         self.gt_generater = GenerateGT(cfg)
         
@@ -40,7 +36,7 @@ class ComputeKPILoss(object):
         
 
     def __call__(self, den , den_scales, gt_den_scales, masks, gt_mask, pre_outflow_map, pre_inflow_map, gt_io_map, \
-                 pre_inf_cnt, pre_out_cnt, gt_in_cnt, gt_out_cnt):
+                 pre_inf_cnt, pre_out_cnt, gt_in_cnt, gt_out_cnt, confidence):
         img_pair_num = den_scales[0].shape[0]//2
 
         assert den.shape == gt_den_scales[0].shape
@@ -58,7 +54,13 @@ class ComputeKPILoss(object):
             # print(f"{scale} ",den_scales[scale].shape)
 
             self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, gt_den_scales[scale] * self.DEN_FACTOR) * self.den_scale_weight[scale]
+            # weight = F.adaptive_avg_pool2d(confidence[:,scale,:,:].unsqueeze(1), den_scales[scale].shape[2:])
+            # weighted_mse = torch.mean(weight * (den_scales[scale]*self.DEN_FACTOR - gt_den_scales[scale] * self.DEN_FACTOR)**2)
+           
 
+
+            # self.cnt_loss_scales[scale] += 2 * weighted_mse * self.den_scale_weight[scale]
+            
              # # # mask loss
         
             
@@ -79,36 +81,23 @@ class ComputeKPILoss(object):
 
 
         # # # overall loss
-        # gt_cnt = gt_den_scales[0].sum()
+        gt_cnt = gt_den_scales[0].sum()
+        pre_cnt = den.sum()
+        self.task_KPI.add({'den': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt - gt_cnt).abs()) },
+                               'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
+                                        max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt - gt_in_cnt).abs().sum() \
+                                            - (pre_out_cnt - gt_out_cnt).abs().sum()) }})
+        self.KPI = self.task_KPI.query()
 
-        # for scale in range(len(den_scales)):
+        loss = torch.stack([self.cnt_loss  , self.out_loss + self.in_loss + self.mask_loss_scales])
+#                 loss = torch.stack([counting_mse_loss ,  out_loss+in_loss ])
+        weight = torch.stack([self.KPI['den'],self.KPI['mask']]).to(loss.device)
+        weight = -(1-weight) * torch.log(weight+1e-8)
+        self.weight = weight/weight.sum()
 
-            # self.task_KPI.add({f'den{scale}': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt[scale] - gt_cnt).abs()) },
-            #                     f'mask{scale}': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
-            #                                     max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt[scale] - gt_in_cnt).abs().sum() - (pre_out_cnt[scale] - gt_out_cnt).abs().sum()) }})
-        
-        
-        # self.KPI = self.task_KPI.query()
+        all_loss = self.weight*loss
+        self.cnt_loss = all_loss[0]
 
-        # loss = torch.stack([1*self.cnt_loss   , 0*self.out_loss + 0*self.in_loss+ 1*self.mask_loss])
-        
-        # loss = torch.stack([self.cnt_loss_scales, self.mask_loss_scales + self.in_loss + self.out_loss]).flatten()
-
-        # for scale in range(len(den_scales)):
-        #     if scale == 0:
-        #         weight_den = self.KPI[f'den{scale}']
-        #         weight_mask = self.KPI[f'mask{scale}']
-        #     else:
-        #         weight_den = torch.hstack([weight_den, self.KPI[f'den{scale}']])
-        #         weight_mask = torch.hstack([weight_mask, self.KPI[f'mask{scale}']])
-
-        # weight = torch.stack([weight_den, weight_mask]).flatten().to(loss.device)
-        # weight = -(1-weight) * torch.log(weight+1e-8)
-        # weight = weight/weight.sum()
-
-        # return weight*loss
-        
-        # scale_loss = 10*self.cnt_loss_scales.sum()
         scale_loss = self.cnt_loss_scales.sum()
 
         
@@ -130,8 +119,7 @@ class ComputeKPILoss(object):
 #         loss = scale_loss + self.mask_loss_scales.sum() + self.dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
         # loss = scale_loss + self.mask_loss_scales.sum() + self.out_loss_scales.sum() + self.in_loss_scales.sum() + \
         #     avg_dynamic_weight * (self.cnt_loss + (self.in_loss + self.out_loss))
-        loss = scale_loss + self.mask_loss_scales.sum() + \
-            avg_dynamic_weight * (self.cnt_loss*10) + (self.in_loss + self.out_loss)
+        loss = scale_loss  + avg_dynamic_weight * (self.cnt_loss*10) + all_loss[1]
         
         return loss
 
