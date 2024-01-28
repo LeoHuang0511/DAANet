@@ -197,16 +197,12 @@ class SMDCAlignment(nn.Module):
 
         
        
-        # f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
-        #               F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        # f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
-        #               F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
 
-        f1 =torch.cat([F.interpolate(f1[0],scale_factor=0.5,mode='bilinear',align_corners=True),  f1[1],
-                      F.interpolate(f1[2],scale_factor=2, mode='bilinear',align_corners=True)], dim=1)
-        f2 =torch.cat([F.interpolate(f2[0],scale_factor=0.5,mode='bilinear',align_corners=True),  f2[1],
-                      F.interpolate(f2[2],scale_factor=2, mode='bilinear',align_corners=True)], dim=1)
-
+        
         f1 = self.feature_head(f1)
         f2 = self.feature_head(f2)
 
