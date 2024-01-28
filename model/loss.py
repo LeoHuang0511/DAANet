@@ -26,9 +26,11 @@ class ComputeKPILoss(object):
         self.DEN_FACTOR = cfg.DEN_FACTOR
         self.gt_generater = GenerateGT(cfg)
         
-        self.den_scale_weight = [2, 0.1,0.01]
-            
+        self.den_scale_weight = [0.5, 1,0.1]
+
         self.dynamic_weight = []
+            
+
         
         
 
@@ -58,6 +60,7 @@ class ComputeKPILoss(object):
             
             weight = F.adaptive_avg_pool2d(confidence[:,scale,:,:].unsqueeze(1), den_scales[scale].shape[2:])
             self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, weight * gt_den_scales[scale] * self.DEN_FACTOR) * self.den_scale_weight[scale]
+            self.a[scale]+=self.cnt_loss_scales[scale]
             
             # weight = F.adaptive_avg_pool2d(confidence[:,scale,:,:].unsqueeze(1), den_scales[scale].shape[2:])
             # weighted_mse = torch.mean(weight * (den_scales[scale]*self.DEN_FACTOR - gt_den_scales[scale] * self.DEN_FACTOR)**2)
