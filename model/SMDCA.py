@@ -105,7 +105,7 @@ class SMDCANet(nn.Module):
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
         confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
 
-        dens = torch.sum(dens * confidences, dim=1).unsqueeze(1)
+        dens = torch.sum(dens, dim=1).unsqueeze(1)
 
 
         # conf = F.adaptive_avg_pool2d(confidences, output_size=feature[0].shape[2:])
