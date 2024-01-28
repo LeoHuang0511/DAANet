@@ -32,7 +32,8 @@ class SMDCANet(nn.Module):
 
             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
-                
+
+
             nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
             nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
 
@@ -195,13 +196,16 @@ class SMDCAlignment(nn.Module):
     def forward(self, f1, f2):
 
         
-        # f = self.feature_head(f)
-        # f1 = f[0::2,:,:,:]
-        # f2 = f[1::2,:,:,:]
-        f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+       
+        # f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
+        #               F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        # f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
+        #               F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+
+        f1 =torch.cat([F.interpolate(f1[0],scale_factor=0.5,mode='bilinear',align_corners=True),  f1[1],
+                      F.interpolate(f1[2],scale_factor=2, mode='bilinear',align_corners=True)], dim=1)
+        f2 =torch.cat([F.interpolate(f2[0],scale_factor=0.5,mode='bilinear',align_corners=True),  f2[1],
+                      F.interpolate(f2[2],scale_factor=2, mode='bilinear',align_corners=True)], dim=1)
 
         f1 = self.feature_head(f1)
         f2 = self.feature_head(f2)
