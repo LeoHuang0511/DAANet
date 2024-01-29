@@ -26,7 +26,9 @@ class ComputeKPILoss(object):
         self.DEN_FACTOR = cfg.DEN_FACTOR
         self.gt_generater = GenerateGT(cfg)
         
-        self.den_scale_weight = [0.5, 1,0.1]
+        # self.den_scale_weight = [2, 0.1,0.01]
+        self.den_scale_weight = [5, 0.1,0.001]
+
 
         self.dynamic_weight = []
             
