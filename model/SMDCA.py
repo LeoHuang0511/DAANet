@@ -166,28 +166,55 @@ class SMDCAlignment(nn.Module):
         
         self.channel_size = num_feat
 
-        self.feature_head = nn.Sequential(
-                                nn.Dropout2d(0.2),
+        # self.feature_head = nn.Sequential(
+        #                         nn.Dropout2d(0.2),
 
-                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
-                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+        #                         # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+        #                         # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+        #                         ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
 
-                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
-                                nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
-                                nn.ReLU(inplace=True),
-                                nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
-        )
-
-        # self.multi_scale_dcn_alignment = MultiScaleDeformableAlingment(cfg, self.channel_size*3, deformable_groups=4)
-        self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
-
-        
+        #                         nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
+        #                         nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
+        #                         nn.ReLU(inplace=True),
+        #                         nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
+        # )
+        # self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
         self.weight_conv = nn.Sequential(
                                 ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
                                 ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
+        )
+
+        self.feature_head = nn.ModuleList()
+        self.multi_scale_dcn_alignment = nn.ModuleList()
+
+        for scale in range(3):
+            self.feature_head.append(nn.Sequential(
+                                nn.Dropout2d(0.2),
+
+                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
+                                ResBlock(in_dim=self.channel_size, out_dim=self.channel_size, dilation=0, norm="bn"),
+
+                                nn.Conv2d(self.channel_size, self.channel_size, kernel_size=3, stride=1, padding=1, bias=False),
+                                nn.BatchNorm2d(self.channel_size, momentum=BN_MOMENTUM),
+                                nn.ReLU(inplace=True),
+                                nn.Conv2d(self.channel_size, self.channel_size, kernel_size=3, stride=1, padding=1)
+                                ))
+            self.multi_scale_dcn_alignment.append(
+                                DeformableConv2d(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True, scale=scale)
+            )
+
+
+        
+        
+
+        self.weight_conv = nn.Sequential(
+                                ResBlock(in_dim=self.channel_size*6, out_dim=self.channel_size*3, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
+
         )
 
      
@@ -197,18 +224,46 @@ class SMDCAlignment(nn.Module):
 
         
        
+        # f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
+        #               F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        # f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
+        #               F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+
+        
+        # f1 = self.feature_head(f1)
+        # f2 = self.feature_head(f2)
+        # f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
+        # f2_aligned, b_flow = self.multi_scale_dcn_alignment(f2, f1)
+
+        f_flow = []
+        b_flow = []
+        f1_aligned = []
+        f2_aligned = []
+
+        for scale in range(len(f1)):
+            f1[scale] = self.feature_head[scale](f1[scale])
+            f2[scale] = self.feature_head[scale](f2[scale])
+
+            f1_align, ff = self.multi_scale_dcn_alignment[scale](f1[scale], f2[scale])
+            f2_align, bf = self.multi_scale_dcn_alignment[scale](f2[scale], f1[scale])
+            f_flow.append(ff)
+            b_flow.append(bf)
+            f1_aligned.append(f1_align)
+            f2_aligned.append(f2_align)
+
+        
         f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
                       F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
         f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
                       F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        f1_aligned =torch.cat([f1_aligned[0],  F.interpolate(f1_aligned[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f1_aligned[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        f2_aligned =torch.cat([f2_aligned[0],  F.interpolate(f2_aligned[1],scale_factor=2,mode='bilinear',align_corners=True),
+                      F.interpolate(f2_aligned[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+
+
 
         
-        f1 = self.feature_head(f1)
-        f2 = self.feature_head(f2)
-
-
-        f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
-        f2_aligned, b_flow = self.multi_scale_dcn_alignment(f2, f1)
        
         f_out = self.weight_conv(torch.cat([f1, f2_aligned], dim=1))
         f_in = self.weight_conv(torch.cat([f2, f1_aligned], dim=1))

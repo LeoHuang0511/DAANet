@@ -164,8 +164,8 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         for i in range(len(f_flow)):
             f = f_flow[i][batch].permute(1,2,0).detach().cpu().numpy()
             b = b_flow[i][batch].permute(1,2,0).detach().cpu().numpy()
-            f_flow_map.append(flow_to_image(f))
-            b_flow_map.append(flow_to_image(b))
+            f_flow_map.append(cv2.resize(flow_to_image(f), (UNIT_W, UNIT_H)))
+            b_flow_map.append(cv2.resize(flow_to_image(b), (UNIT_W, UNIT_H)))
             # print(attn_1[i][0][0].shape)
         for i in range(len(attn_1)):
 
@@ -219,7 +219,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
             ########## mask ###############
             mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
-            mask_in_scale_1 =  mask[i][2,:,:,:].detach().cpu().numpy()
+            mask_in_scale_1 =  mask[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy()
             
 
             # mask_out_scale_1 = np.argmax(mask[i][0,:,:,:].detach().cpu().numpy(), axis=0)
