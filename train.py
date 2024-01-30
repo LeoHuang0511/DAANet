@@ -142,8 +142,8 @@ class Trainer():
         self.compute_kpi_loss = ComputeKPILoss(self,cfg)
 
         self.generate_gt = GenerateGT(cfg)
-        self.FEATURE_SCALE = cfg.FEATURE_SCALE
-        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, FEATURE_SCALE=self.FEATURE_SCALE)
+        self.feature_scale = cfg.FEATURE_SCALE
+        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, FEATURE_SCALE=self.feature_scale)
 
 
         self.writer, self.log_txt = logger(self.cfg, self.exp_path, self.exp_name, self.pwd, ['exp','test_demo', 'notebooks','.git'], resume=self.resume)
@@ -238,7 +238,7 @@ class Trainer():
                                                                             feature2, 
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
-                                                                            self.FEATURE_SCALE)
+                                                                            self.feature_scale)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
             gt_mask = (gt_io_map>0).float()
@@ -729,7 +729,7 @@ if __name__=='__main__':
 
     cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.TASK)  # the path of logs, checkpoints, and current codes
     
-    cfg.mode = 'train'
+    cfg.MODE = 'train'
 
     if cfg.DATASET == "SENSE":
         cfg.TRAIN_FRAME_INTERVALS = [5,12]
