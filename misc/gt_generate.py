@@ -10,7 +10,7 @@ class GenerateGT():
     def __init__(self, cfg):
         self.cfg = cfg
 
-        self.sigma = cfg.gaussian_sigma
+        self.sigma = cfg.GAUSSIAN_SIGMA
 
         self.Gaussian = Gaussianlayer(sigma=[self.sigma]).cuda()
 
@@ -161,7 +161,7 @@ class GenerateGT():
             ce[:img_pair_num] = -F.cross_entropy(masks[scale][:img_pair_num], gt_masks[scale][:,0,:,:],reduction = "none").unsqueeze(1)
             ce[img_pair_num:] = -F.cross_entropy(masks[scale][img_pair_num:], gt_masks[scale][:,1,:,:],reduction = "none").unsqueeze(1)
             ce = F.upsample_nearest(ce, scale_factor=2**scale)
-            ce = F.adaptive_avg_pool2d(ce, output_size=(int(self.cfg.TRAIN_SIZE[0] * self.cfg.feature_scale), int(self.cfg.TRAIN_SIZE[1] * self.cfg.feature_scale)))
+            ce = F.adaptive_avg_pool2d(ce, output_size=(int(self.cfg.TRAIN_SIZE[0] * self.cfg.FEATURE_SCALE), int(self.cfg.TRAIN_SIZE[1] * self.cfg.FEATURE_SCALE)))
 
 
             ce_scales.append(ce)

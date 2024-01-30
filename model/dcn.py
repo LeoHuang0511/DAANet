@@ -96,7 +96,7 @@ class DeformableConv2d(nn.Module):
                                           stride=self.stride,
                                           )
                                           
-        offset_vis = offset_visualization(offset_map, 1 //( self.cfg.feature_scale))
+        offset_vis = offset_visualization(offset_map, 1 //( self.cfg.FEATURE_SCALE))
         return x, offset_vis
 
 class MultiColumnOffsetConv(nn.Module):

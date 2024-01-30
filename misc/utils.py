@@ -84,8 +84,7 @@ def logger_txt(log_file,epoch,iter,scores):
 
 def save_test_logger(cfg, exp_path,cnt_result, final_result):
     
-    # dir = os.path.join(exp_path,cfg.task,cfg.model_path.split('/')[-2],os.path.basename(cfg.model_path).split('_')[3])
-    dir = cfg.model_path.replace('exp', exp_path).replace(cfg.model_path.split('/')[-1],'' )
+    dir = cfg.MODEL_PATH.replace('exp', exp_path).replace(cfg.MODEL_PATH.split('/')[-1],'' )
 
     if not os.path.isdir(dir):
         os.makedirs(dir)
@@ -94,8 +93,8 @@ def save_test_logger(cfg, exp_path,cnt_result, final_result):
     log_file = os.path.join(dir, 'log.txt')
 
     with open(log_file, 'a') as f:
-        f.write(f'ep: {os.path.basename(cfg.model_path).split("_")[1]}    iter: {os.path.basename(cfg.model_path).split("_")[3]}\n\n')
-        f.write(f'model_path: {cfg.model_path}  \ntest_interval: {cfg.test_intervals}\n\n')
+        f.write(f'ep: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+        f.write(f'model_path: {cfg.MODEL_PATH}  \ntest_interval: {cfg.TEST_INTERVALS}\n\n')
         f.write(f'Prev vs. GT: {cnt_result}\n\n')
         for k in final_result.keys():
             f.write(f'{k}: {final_result[k]}\n\n')
@@ -114,7 +113,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
     # for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data,pred_map0, gt_map0, pred_map1, gt_map1, \
     #                                  pred_mask_out, gt_mask_out, pred_mask_in, gt_mask_in, attn_1, attn_2)):
 
-    if cfg.mode == 'test':
+    if cfg.MODE == 'test':
         cfg.TRAIN_BATCH_SIZE = cfg.VAL_BATCH_SIZE
     
     COLOR_MAP = [
@@ -423,10 +422,10 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
             count+=1
 
 
-        if cfg.mode == 'test':
+        if cfg.MODE == 'test':
            
             try:    
-                dir = os.path.join(cfg.model_path.replace('exp', cfg.output_dir).replace(cfg.model_path.split('/')[-1],os.path.basename(cfg.model_path).split('_')[3]),scene_name.split('/')[-1])
+                dir = os.path.join(cfg.MODEL_PATH.replace('exp', cfg.OUTPUT_DIR).replace(cfg.MODEL_PATH.split('/')[-1],os.path.basename(cfg.MODEL_PATH).split('_')[3]),scene_name.split('/')[-1])
             except:
                 dir = './'
         else:
