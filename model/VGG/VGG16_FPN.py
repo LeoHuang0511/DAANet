@@ -7,8 +7,6 @@ from misc.layer import *
 from model.necks import FPN
 from .conv import ResBlock, BasicConv
 
-from model.attention import MultiScaleFeatureFusion
-
 BatchNorm2d = nn.BatchNorm2d
 BN_MOMENTUM = 0.01
 
