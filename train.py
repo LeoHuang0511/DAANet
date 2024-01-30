@@ -43,10 +43,10 @@ class Trainer():
 
 
         params = [
-            {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
         
         ]
         
@@ -54,15 +54,15 @@ class Trainer():
         
         self.i_tb = 0
         self.epoch = 1
-        if cfg.task == "SP":
+        if cfg.TASK == "SP":
             self.train_record = {'best_model_name': '', 'den_mae':1e20, 'den_mse':1e20, 'in_mae':1e20, 'in_mse':1e20,\
                                                 'out_mae':1e20, 'out_mse':1e20}
 
-        elif cfg.task == "FT":
+        elif cfg.TASK == "FT":
             self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
         
         
-        if self.cfg.RESUME:
+        if self.cfg.RESUME_PATH != None:
             self.optimizer = optim.Adam(params)
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
@@ -125,10 +125,10 @@ class Trainer():
                 
             
             self.lr_scheduler_base = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_Base,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[0])
+                                    cycle_mult=2,max_lr=self.cfg.LR_BASE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[0])
             
             self.lr_scheduler_thre = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_Thre,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[1,2])
+                                    cycle_mult=2,max_lr=self.cfg.LR_THRE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[1,2])
 
                
             print("Finish loading pretrained model")
@@ -138,12 +138,12 @@ class Trainer():
         
         self.timer={'iter time': Timer(), 'train time': Timer(), 'val time': Timer()}
         self.num_iters = self.cfg.MAX_EPOCH * np.int64(len(self.train_loader))
-        # self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
+        # self.TASK_KPI=TASK_KPI_Pool(TASK_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
         self.compute_kpi_loss = ComputeKPILoss(self,cfg)
 
         self.generate_gt = GenerateGT(cfg)
-        self.feature_scale = cfg.feature_scale
-        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, feature_scale=self.feature_scale)
+        self.FEATURE_SCALE = cfg.FEATURE_SCALE
+        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, FEATURE_SCALE=self.FEATURE_SCALE)
 
 
         self.writer, self.log_txt = logger(self.cfg, self.exp_path, self.exp_name, self.pwd, ['exp','test_demo', 'notebooks','.git'], resume=self.resume)
@@ -164,8 +164,8 @@ class Trainer():
         if self.cfg.PRETRAIN_PATH == '':
             lr1, lr2 = adjust_learning_rate(self.optimizer,
                                     self.epoch,
-                                    self.cfg.LR_Base,
-                                    self.cfg.LR_Thre,
+                                    self.cfg.LR_BASE,
+                                    self.cfg.LR_THRE,
                                     self.cfg.LR_DECAY)
 
         batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'scale_io':AverageMeter()}
@@ -177,7 +177,7 @@ class Trainer():
             self.i_tb += 1
             img,target = data
 
-            if self.cfg.task == 'SP':
+            if self.cfg.TASK == 'SP':
                 flat_target = []
                 for tar_pair in target:
                     for tar in tar_pair:
@@ -186,7 +186,7 @@ class Trainer():
                 target = flat_target
                 img = torch.cat(img,0).cuda()
 
-            elif self.cfg.task == 'FT':
+            elif self.cfg.TASK == 'FT':
                 img = torch.stack(img,0).cuda()
             
 
@@ -238,7 +238,7 @@ class Trainer():
                                                                             feature2, 
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
-                                                                            self.feature_scale)
+                                                                            self.FEATURE_SCALE)
             con_loss /= cfg.TRAIN_BATCH_SIZE
             
             gt_mask = (gt_io_map>0).float()
@@ -297,7 +297,7 @@ class Trainer():
 
                 self.timer['iter time'].toc(average=False)
                
-                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][lr_base %f][lr_thre %f][%.2fs]' % \
+                print('[ep %d][it %d][loss_den %.4f][loss_den_scale %.4f][loss_mask %.4f][loss_in %.4f][loss_out %.4f][loss_con %.4f][LR_BASE %f][LR_THRE %f][%.2fs]' % \
                         (self.epoch, self.i_tb, batch_loss['den'].avg,batch_loss['scale_den'].avg, batch_loss['mask'].avg, batch_loss['in'].avg,
                         batch_loss['out'].avg,batch_loss['con'].avg, lr1, lr2, self.timer['iter time'].diff))
 
@@ -323,9 +323,9 @@ class Trainer():
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
                 self.timer['val time'].tic()
-                if self.cfg.task == "SP":
+                if self.cfg.TASK == "SP":
                     self.shift_validate()
-                elif self.cfg.task == "FT":
+                elif self.cfg.TASK == "FT":
                     self.validate()
                 self.net.train()
                 self.timer['val time'].toc(average=False)
@@ -658,7 +658,6 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--EXP_NAME', type=str, default='')
 
-    parser.add_argument('--RESUME', default=False, action='store_true', help="resume previous training")
     parser.add_argument('--RESUME_PATH',type=str, default='')
     parser.add_argument('--PRETRAIN_PATH',type=str, default='')
     parser.add_argument('--FROZEN', default=False, action='store_true', help="frozen pretrained frontend weights")
@@ -667,36 +666,26 @@ if __name__=='__main__':
     parser.add_argument('--GPU_ID', type=str, default='0')
     parser.add_argument('--SEED', type=int, default=3035)
     parser.add_argument('--DATASET', type=str, default='HT21')
-    parser.add_argument('--task', type=str, default='FT')
+    parser.add_argument('--TASK', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
-    parser.add_argument('--backbone', type=str, default='vgg')
-
-
-
+    parser.add_argument('--BACKBONE', type=str, default='vgg')
 
 
     parser.add_argument('--LR_MIN', type=float, default=1e-6)
-    # parser.add_argument('--LR_MAX', type=float, default=1e-4)
-    parser.add_argument('--LR_Base', type=float, default=5e-5, help='density branch')
-    parser.add_argument('--LR_Thre', type=float, default=1e-4, help='mask branch')
+    parser.add_argument('--LR_BASE', type=float, default=5e-5, help='density branch')
+    parser.add_argument('--LR_THRE', type=float, default=1e-4, help='mask branch')
     parser.add_argument('--LR_DECAY', type=float, default=0.95)
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
     parser.add_argument('--WARMUP_EPOCH', type=int, default=3, help='number of epochs for warm up step in cosine annealing lr scheduler')
     parser.add_argument('--MAX_EPOCH', type=int, default=20)
-    parser.add_argument('--worker', type=int, default=4)
+    parser.add_argument('--WORKER', type=int, default=4)
 
 
-    parser.add_argument('--con_alpha', type=float, default=0.1)
-    parser.add_argument('--con_scale', type=int, default=1)
-    parser.add_argument('--intra_loss', default=False, action='store_true', help="intra loss")
-    parser.add_argument('--intra_loss_alpha', type=float, default=0.1)
-
-
-
-    parser.add_argument('--warp_alpha', type=float, default=0)
-    parser.add_argument('--scale_mask_alpha', type=float, default=0)
-
+    parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
+    parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
+    parser.add_argument('--MASK_WEIGHT', type=float, default=1)
+    parser.add_argument('--IO_WEIGHT', type=float, default=1)
 
 
 
@@ -704,25 +693,17 @@ if __name__=='__main__':
     #_test or val
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=1)
-
-    # parser.add_argument('--VAL_INTERVALS', type=int, default=75)
-    # parser.add_argument('--ADJ_SCALES', type=int, nargs='+', default=[1])
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-    parser.add_argument('--mask_threshold', type=float, default=0.5)
 
 
 
     #_train
     parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-    parser.add_argument('--GRID_SIZE', type=int, default=8)
     parser.add_argument('--TRAIN_FRAME_INTERVALS', type=int, nargs='+', default=[40, 85])
     parser.add_argument('--TRAIN_BATCH_SIZE', type=int, default=2)
-    parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--ROI_RADIUS', type=float, default=4.)
-    parser.add_argument('--feature_scale', type=float, default=1/4.)
-    parser.add_argument('--target_ratio', type=float, default=2)
-    parser.add_argument('--gaussian_sigma', type=float, default=4)
-    parser.add_argument('--Dynamic_freq', type=int, default=2000)
+    parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
+    parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
 
 
@@ -744,9 +725,9 @@ if __name__=='__main__':
     cfg.EXP_NAME = now \
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
-    + '_' + str(cfg.LR_Base)
+    + '_' + str(cfg.LR_BASE)
 
-    cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.task)  # the path of logs, checkpoints, and current codes
+    cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.TASK)  # the path of logs, checkpoints, and current codes
     
     cfg.mode = 'train'
 

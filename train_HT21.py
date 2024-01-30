@@ -615,7 +615,6 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--EXP_NAME', type=str, default='')
 
-    parser.add_argument('--RESUME', default=False, action='store_true', help="resume previous training")
     parser.add_argument('--RESUME_PATH',type=str, default='')
     parser.add_argument('--PRETRAIN_PATH',type=str, default='')
     parser.add_argument('--FROZEN', default=False, action='store_true', help="frozen pretrained frontend weights")
@@ -624,37 +623,26 @@ if __name__=='__main__':
     parser.add_argument('--GPU_ID', type=str, default='0')
     parser.add_argument('--SEED', type=int, default=3035)
     parser.add_argument('--DATASET', type=str, default='HT21')
-    parser.add_argument('--task', type=str, default='FT')
+    parser.add_argument('--TASK', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
-    parser.add_argument('--backbone', type=str, default='vgg')
-
-
-
+    parser.add_argument('--BACKBONE', type=str, default='vgg')
 
 
     parser.add_argument('--LR_MIN', type=float, default=1e-6)
-    # parser.add_argument('--LR_MAX', type=float, default=1e-4)
-    parser.add_argument('--LR_Base', type=float, default=5e-5, help='density branch')
-    parser.add_argument('--LR_Thre', type=float, default=1e-4, help='mask branch')
+    parser.add_argument('--LR_BASE', type=float, default=5e-5, help='density branch')
+    parser.add_argument('--LR_THRE', type=float, default=1e-4, help='mask branch')
     parser.add_argument('--LR_DECAY', type=float, default=0.95)
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
     parser.add_argument('--WARMUP_EPOCH', type=int, default=3, help='number of epochs for warm up step in cosine annealing lr scheduler')
     parser.add_argument('--MAX_EPOCH', type=int, default=20)
-    parser.add_argument('--worker', type=int, default=4)
+    parser.add_argument('--WORKER', type=int, default=4)
 
 
-
-    parser.add_argument('--con_alpha', type=float, default=0.1)
-    parser.add_argument('--con_scale', type=int, default=1)
-    parser.add_argument('--intra_loss', default=False, action='store_true', help="intra loss")
-    parser.add_argument('--intra_loss_alpha', type=float, default=0.1)
-
-
-
-    parser.add_argument('--warp_alpha', type=float, default=0)
-    parser.add_argument('--scale_mask_alpha', type=float, default=0)
-
+    parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
+    parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
+    parser.add_argument('--MASK_WEIGHT', type=float, default=1)
+    parser.add_argument('--IO_WEIGHT', type=float, default=1)
 
 
 
@@ -662,30 +650,18 @@ if __name__=='__main__':
     #_test or val
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=1)
-
-    # parser.add_argument('--VAL_INTERVALS', type=int, default=75)
-    # parser.add_argument('--ADJ_SCALES', type=int, nargs='+', default=[1])
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-    parser.add_argument('--mask_threshold', type=float, default=0.5)
 
 
 
     #_train
     parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-    parser.add_argument('--GRID_SIZE', type=int, default=8)
     parser.add_argument('--TRAIN_FRAME_INTERVALS', type=int, nargs='+', default=[40, 85])
     parser.add_argument('--TRAIN_BATCH_SIZE', type=int, default=2)
-    parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--ROI_RADIUS', type=float, default=4.)
-    parser.add_argument('--feature_scale', type=float, default=1/4.)
-    parser.add_argument('--target_ratio', type=float, default=2)
-    parser.add_argument('--gaussian_sigma', type=float, default=4)
-    parser.add_argument('--Dynamic_freq', type=int, default=2000)
+    parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
+    parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
-    
-    
-    
-
 
 
 
