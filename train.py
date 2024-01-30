@@ -268,7 +268,7 @@ class Trainer():
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
             batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
             batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
-            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
+            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
 
@@ -285,7 +285,7 @@ class Trainer():
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
-                self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
+                # self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
 
 
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
