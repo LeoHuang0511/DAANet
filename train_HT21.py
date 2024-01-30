@@ -202,8 +202,7 @@ class Trainer():
 
             
 
-            pre_inf_cnt, pre_out_cnt = \
-                            in_den.sum(), out_den.sum()
+            pre_inf_cnt, pre_out_cnt = in_den.sum(), out_den.sum()
 
 
 

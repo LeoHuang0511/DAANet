@@ -122,7 +122,7 @@ def createTrainData(datasetname, Dataset, cfg, cfg_data):
                                                    n_per=cfg.TRAIN_BATCH_SIZE)
     
 
-    train_loader = DataLoader(train_set, batch_sampler=train_sampler, num_workers=cfg.worker, collate_fn=collate_fn, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_sampler=train_sampler, num_workers=cfg.WORKER, collate_fn=collate_fn, pin_memory=True)
     print('dataset is {}, images num is {}'.format(datasetname, train_set.__len__()))
 
     return  train_loader
@@ -156,7 +156,7 @@ def loading_data(cfg):
     datasetname = cfg.DATASET.upper()
     cfg_data = getattr(setting, datasetname).cfg_data
     
-    if cfg.task == 'SP':
+    if cfg.TASK == 'SP':
         train_Dataset = dataset.ShiftPretrainDataset
         train_loader = Shift_createData(datasetname, train_Dataset, cfg, cfg_data, mode='train')
     #     train_loader = createTrainData(datasetname, Dataset, cfg_data)
@@ -168,7 +168,7 @@ def loading_data(cfg):
 
         return train_loader, val_loader, restore_transform
 
-    elif cfg.task == 'FT':
+    elif cfg.TASK == 'FT':
         train_Dataset = dataset.Dataset
         # print(cfg_data)
 
@@ -269,7 +269,7 @@ def Shift_createData(datasetname, Dataset, cfg, cfg_data, mode='train'):
                     datasetname=datasetname)
     sampler = samplers.ShiftSampler(set.labels, n_per=batch_size)
     
-    loader = DataLoader(set, batch_sampler=sampler, num_workers=cfg.worker, collate_fn=collate_fn, pin_memory=True)
+    loader = DataLoader(set, batch_sampler=sampler, num_workers=cfg.WORKER, collate_fn=collate_fn, pin_memory=True)
    
 
     print('dataset is {}, images num is {}'.format(datasetname, set.__len__()))

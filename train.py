@@ -37,7 +37,11 @@ class Trainer():
 
         self.pwd = pwd
         self.cfg_data = cfg_data
-        self.resume = cfg.RESUME
+
+        if cfg.RESUME_PATH != '':
+            self.resume = True
+        else:
+            self.resume = False
 
         self.net = SMDCANet(cfg, cfg_data).cuda()
 
@@ -62,7 +66,7 @@ class Trainer():
             self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
         
         
-        if self.cfg.RESUME_PATH != None:
+        if self.cfg.RESUME_PATH != '':
             self.optimizer = optim.Adam(params)
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
@@ -143,7 +147,7 @@ class Trainer():
 
         self.generate_gt = GenerateGT(cfg)
         self.feature_scale = cfg.FEATURE_SCALE
-        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, FEATURE_SCALE=self.feature_scale)
+        self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, feature_scale=self.feature_scale)
 
 
         self.writer, self.log_txt = logger(self.cfg, self.exp_path, self.exp_name, self.pwd, ['exp','test_demo', 'notebooks','.git'], resume=self.resume)
@@ -195,10 +199,8 @@ class Trainer():
             den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
             
 
-            pre_inf_cnt = []
-            pre_out_cnt = []
-
-
+            pre_inf_cnt, pre_out_cnt = in_den.sum(), out_den.sum()
+            
 
             #    -----------gt generate & loss computation------------------
             target_ratio = den_scales[0].shape[2]/img.shape[2]
@@ -250,7 +252,7 @@ class Trainer():
             
 
 
-            all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
+            all_loss = (kpi_loss + con_loss * cfg.CON_WEIGHT ).sum()
 
 
 
