@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 from .VGG.VGG16_FPN import VGG16_FPN
-from .attention import MultiScaleFeatureFusion, SpatialWeightLayer
-# from .MSDA import OffsetVariantDeformableAlingment#, MultiScaleDeformableAlingment#, VariantRegionAttention
 from .dcn import DeformableConv2d
 from .VGG.conv import ResBlock
 import torch.nn.functional as F
