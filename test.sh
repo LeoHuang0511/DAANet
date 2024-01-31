@@ -1,3 +1,9 @@
-python test_SENSE.py --model_path /nfs/home/leo0511/Research/SSSP/exp/SENSE/FT/12-06_17-46_twcc_con50_all_SENSE_5e-05/ep_18_iter_275000_mae_6.360_mse_8.870_seq_MAE_8.069_WRAE_18.373_MIAE_1.122_MOAE_1.143.pth --GPU_ID 5
-python test_SENSE.py --model_path /nfs/home/leo0511/Research/SSSP/exp/SENSE/FT/12-06_17-46_twcc_con50_all_SENSE_5e-05/ep_19_iter_291000_mae_5.553_mse_7.271_seq_MAE_9.733_WRAE_20.380_MIAE_1.178_MOAE_1.156.pth --GPU_ID 5
-python test_SENSE.py --model_path /nfs/home/leo0511/Research/SSSP/exp/SENSE/FT/12-06_17-46_twcc_con50_all_SENSE_5e-05/ep_19_iter_296000_mae_6.962_mse_8.926_seq_MAE_10.101_WRAE_23.246_MIAE_1.141_MOAE_1.141.pth --GPU_ID 5
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_4_iter_8000_mae_2.839_mse_3.301_seq_MAE_34.799_seq_MSE_34.799_WRAE_53.537_MIAE_4.474_MOAE_6.003.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_4_iter_9000_mae_2.949_mse_3.360_seq_MAE_25.168_seq_MSE_25.168_WRAE_38.720_MIAE_3.158_MOAE_4.602.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_5_iter_11000_mae_4.182_mse_5.627_seq_MAE_12.642_seq_MSE_12.642_WRAE_19.450_MIAE_1.963_MOAE_3.161.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_5_iter_13000_mae_2.724_mse_3.428_seq_MAE_37.462_seq_MSE_37.462_WRAE_57.634_MIAE_5.066_MOAE_5.877.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_6_iter_14000_mae_2.552_mse_3.470_seq_MAE_26.790_seq_MSE_26.790_WRAE_41.215_MIAE_3.693_MOAE_5.336.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_7_iter_18000_mae_4.080_mse_5.470_seq_MAE_12.136_seq_MSE_12.136_WRAE_18.670_MIAE_2.347_MOAE_3.459.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_8_iter_20000_mae_2.451_mse_3.528_seq_MAE_25.115_seq_MSE_25.115_WRAE_38.638_MIAE_3.540_MOAE_5.596.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_8_iter_21000_mae_2.765_mse_3.198_seq_MAE_29.211_seq_MSE_29.211_WRAE_44.940_MIAE_3.780_MOAE_5.282.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-30_15-29__HT21_5e-05/ep_9_iter_22000_mae_8.097_mse_8.838_seq_MAE_7.078_seq_MSE_7.078_WRAE_10.890_MIAE_2.114_MOAE_3.590.pth --GPU_ID 0

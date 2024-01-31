@@ -27,7 +27,7 @@ parser.add_argument(
     '--DATASET', type=str, default='SENSE',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--task', type=str, default='FT',
+    '--TASK', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--output_dir', type=str, default='../test_demo',
@@ -52,23 +52,25 @@ parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
 
 
 parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-parser.add_argument('--feature_scale', type=float, default=1/4.)
+parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
 
 
 parser.add_argument('--DEN_FACTOR', type=float, default=200.)
 parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
 parser.add_argument('--ROI_RADIUS', type=float, default=4.)
-parser.add_argument('--gaussian_sigma', type=float, default=4)
-parser.add_argument('--Dynamic_freq', type=int, default=2000)
+parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
 parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+
+parser.add_argument('--BACKBONE', type=str, default='vgg')
+
 
 
 parser.add_argument(
-    '--model_path', type=str, default='',
+    '--MODEL_PATH', type=str, default='',
     help='pretrained weight path')
 
 # parser.add_argument(
-#     '--model_path', type=str, default='./exp/SENSE/03-22_17-33_SENSE_VGG16_FPN_5e-05/ep_15_iter_115000_mae_2.211_mse_3.677_seq_MAE_6.439_WRAE_9.506_MIAE_1.447_MOAE_1.474.pth',
+#     '--MODEL_PATH', type=str, default='./exp/SENSE/03-22_17-33_SENSE_VGG16_FPN_5e-05/ep_15_iter_115000_mae_2.211_mse_3.677_seq_MAE_6.439_WRAE_9.506_MIAE_1.447_MOAE_1.474.pth',
 #     help='pretrained weight path')
 
 
@@ -78,10 +80,12 @@ opt = parser.parse_args()
 
 opt.VAL_INTERVALS = opt.test_intervals
 
-opt.mode = 'test'
+opt.MODE = 'test'
 
 
 def test(cfg, cfg_data):
+    print("model_path: ",cfg.MODEL_PATH)
+
     with torch.no_grad():
         net = SMDCANet(cfg, cfg_data)
         with open(osp.join(cfg_data.DATA_PATH, 'scene_label.txt'), 'r') as f:
@@ -92,11 +96,11 @@ def test(cfg, cfg_data):
             scene_label.update({line[0]: [int(i) for i in line[1:]] })
 
         # test_loader, restore_transform = datasets.loading_testset(cfg.DATASET, test_interval=cfg.test_intervals,mode='test')
-        test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.mode)
+        test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
         device = torch.device("cuda:"+str(torch.cuda.current_device()))
         
 
-        state_dict = torch.load(cfg.model_path,map_location=device)
+        state_dict = torch.load(cfg.MODEL_PATH,map_location=device)
         
         net.load_state_dict(state_dict, strict=True)
 
@@ -274,14 +278,14 @@ def test(cfg, cfg_data):
             if scene_l[3] == 3: scenes_pred_dict['density3'].append(pred_dict);  scenes_gt_dict['density3'].append(gt_dict)
             if scene_l[3] == 4: scenes_pred_dict['density4'].append(pred_dict);  scenes_gt_dict['density4'].append(gt_dict)
         
-        dir = cfg.model_path.replace('exp', cfg.output_dir).replace(cfg.model_path.split('/')[-1],'' )
+        dir = cfg.MODEL_PATH.replace('exp', cfg.output_dir).replace(cfg.MODEL_PATH.split('/')[-1],'' )
         if not os.path.isdir(dir):
             os.makedirs(dir)
 
         log_file = os.path.join(dir, 'log.txt')
         with open(log_file, 'a') as f:
-            f.write(f'iter: {os.path.basename(cfg.model_path).split("_")[1]}    iter: {os.path.basename(cfg.model_path).split("_")[3]}\n\n')
-            f.write(f'model_path: {cfg.model_path}\n\n')
+            f.write(f'iter: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+            f.write(f'model_path: {cfg.MODEL_PATH}\n\n')
             
         
 

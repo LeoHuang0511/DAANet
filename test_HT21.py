@@ -24,19 +24,19 @@ parser.add_argument(
     '--DATASET', type=str, default='HT21',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--task', type=str, default='FT',
+    '--TASK', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--output_dir', type=str, default='../test_demo',
+    '--OUPUT_DIR', type=str, default='../test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--test_intervals', type=int, default=60,
+    '--TEST_INTERVALS', type=int, default=60,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--skip_flag', type=bool, default=True,
+    '--SKIP_FLAG', type=bool, default=True,
     help='To caculate the MIAE and MOAE, it should be False')
 parser.add_argument(
-    '--save_freq', type=int, default=2,
+    '--SAVE_FREQ', type=int, default=60,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,
@@ -48,21 +48,26 @@ parser.add_argument(
 
 
 parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-parser.add_argument('--TemporalScale', type=int, default=2)
 
 
 
 parser.add_argument('--TRAIN_SIZE', type=int, nargs='+', default=[768,1024])
-parser.add_argument('--feature_scale', type=float, default=1/4.)
-parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
 
 
 
 parser.add_argument('--DEN_FACTOR', type=float, default=200.)
 parser.add_argument('--MEAN_STD', type=tuple, default=([117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]))
+parser.add_argument('--ROI_RADIUS', type=float, default=4.)
+parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
+parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+
+parser.add_argument('--BACKBONE', type=str, default='vgg')
+
+
 
 parser.add_argument(
-    '--model_path', type=str, default='',
+    '--MODEL_PATH', type=str, default='',
     help='pretrained weight path')
 
 
@@ -73,54 +78,46 @@ parser.add_argument(
 
 
 opt = parser.parse_args()
-# opt.output_dir = opt.output_dir+'_'+opt.DATASET
+# opt.OUPUT_DIR = opt.OUPUT_DIR+'_'+opt.DATASET
 
 
-opt.VAL_INTERVALS = opt.test_intervals
+opt.VAL_INTERVALS = opt.TEST_INTERVALS
 
-opt.TRAIN_BATCH_SIZE = opt.VAL_BATCH_SIZE
 
-opt.mode = 'test'
+opt.MODE = 'test'
 
 
 def test(cfg, cfg_data):
 
-    print("model_path: ",cfg.model_path)
+    print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
         # net = video_crowd_count(cfg, cfg_data)
         net = SMDCANet(cfg, cfg_data)
 
-        test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.mode)
+        test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
         device = torch.device("cuda:"+str(torch.cuda.current_device()))
 
-        state_dict = torch.load(cfg.model_path,map_location=device)
+        state_dict = torch.load(cfg.MODEL_PATH,map_location=device)
         try:
             net.load_state_dict(state_dict, strict=True)
         except:
             net.load_state_dict(state_dict["net"], strict=True)
-        #     model_dict = net.state_dict()
-        #     # load_dict = []
-            
-        #     state_dict = {k: v for k, v in state_dict.items() if k in model_dict}
-        #     # list = {k:v for k,v in state_dict.items() if k in load_dict}
-
-        #     model_dict.update(state_dict)
-        #     net.load_state_dict(model_dict, strict=True)
+      
         net.cuda()
         net.eval()
         scenes_pred_dict = []
         gt_flow_cnt = [133,737,734,1040,321]
         scene_names = ['HT21-11','HT21-12','HT21-13','HT21-14','HT21-15']
 
-        if cfg.skip_flag:
+        if cfg.SKIP_FLAG:
             intervals = 1
         else:
-            intervals = cfg.test_intervals
+            intervals = cfg.TEST_INTERVALS
         
         for scene_id, sub_valset in enumerate(test_loader, 0):
             gen_tqdm = tqdm(sub_valset)
-            video_time = len(sub_valset) + cfg.test_intervals
+            video_time = len(sub_valset) + cfg.TEST_INTERVALS
             print(video_time)
             scene_name = scene_names[scene_id]
 
@@ -157,12 +154,12 @@ def test(cfg, cfg_data):
 
 
 
-                        den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                        # den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                        den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
                         
 
 
 
-                        final_den, out_den, in_den, den_probs, io_probs, confidence = net.scale_fuse(den_scales, masks, confidence, 'val')
 
                         
 
@@ -175,13 +172,13 @@ def test(cfg, cfg_data):
 
                         #    -----------gt generate & loss computation------------------
                          
-                        pred_cnt = final_den[0].sum().item()
+                        pred_cnt = pred_map[0].sum().item()
 
 
                 
 
                         if vi == 0:
-                            pred_dict['first_frame'] = final_den[0].sum().item()
+                            pred_dict['first_frame'] = pred_map[0].sum().item()
 
 
                         pred_dict['inflow'].append(pre_inf_cnt)
@@ -194,24 +191,20 @@ def test(cfg, cfg_data):
 
                         img_pair_idx+=1
             
-                        if img_pair_idx % cfg.save_freq == 0:
-                             if img_pair_idx % cfg.save_freq == 0:
-                                gt_confidence = confidence.clone()
-                                gt_den_scales = den_scales.copy()
-                                gt_mask_scales = []
-                                for i in range(3):
-                                    
-
-                                    gt_mask_scales.append(torch.zeros(1,2,masks[i].shape[2], masks[i].shape[3]).long())
-                                
+                        if img_pair_idx % cfg.SAVE_FREQ == 0:
+                             if img_pair_idx % cfg.SAVE_FREQ == 0:
+                                gt_den_scales = torch.zeros_like(den_scales)
+                                gt_mask = torch.zeros_like(mask)
+                                          
 
 
 
-                                save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.test_intervals), restore_transform, 0, 
+                                save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                    final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
+                                    pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
                                     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, attn_1, attn_2, den_scales, gt_den_scales, masks, gt_mask_scales, den_probs, io_probs)
+                                    f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales,\
+                                    [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
 
     #                    
     # +
@@ -230,7 +223,7 @@ def test(cfg, cfg_data):
         final_result = {'seq_MAE':MAE, 'seq_MSE':MSE, 'WRAE':WRAE}
         
         print(final_result)
-        save_test_logger(cfg, cfg.output_dir, crowdflow_cnt, final_result)
+        save_test_logger(cfg, cfg.OUPUT_DIR, crowdflow_cnt, final_result)
 
 
 

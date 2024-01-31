@@ -98,6 +98,9 @@ def save_test_logger(cfg, exp_path,cnt_result, final_result):
         f.write(f'Prev vs. GT: {cnt_result}\n\n')
         for k in final_result.keys():
             f.write(f'{k}: {final_result[k]}\n\n')
+        f.write('-'*50)
+        f.write('\n\n\n')
+
 
 
 
