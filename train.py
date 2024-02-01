@@ -726,9 +726,11 @@ if __name__=='__main__':
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
     cfg.EXP_NAME = now \
+    + '_' + cfg.BASK_BONE\
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
-    + '_' + str(cfg.LR_BASE)
+    + '_' + str(cfg.LR_BASE)\
+    + '_' + str(cfg.LR_THRE)
 
     cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.TASK)  # the path of logs, checkpoints, and current codes
     

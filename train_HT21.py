@@ -37,16 +37,19 @@ class Trainer():
 
         self.pwd = pwd
         self.cfg_data = cfg_data
-        self.resume = cfg.RESUME
+        if cfg.RESUME_PATH != '':
+            self.resume = True
+        else:
+            self.resume = False
 
         self.net = SMDCANet(cfg, cfg_data).cuda()
 
 
         params = [
-            {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_Thre, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_Base, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
         
         ]
         
@@ -54,15 +57,15 @@ class Trainer():
         
         self.i_tb = 0
         self.epoch = 1
-        if cfg.task == "SP":
+        if cfg.TASK == "SP":
             self.train_record = {'best_model_name': '', 'den_mae':1e20, 'den_mse':1e20, 'in_mae':1e20, 'in_mse':1e20,\
                                                 'out_mae':1e20, 'out_mse':1e20}
 
-        elif cfg.task == "FT":
+        elif cfg.TASK == "FT":
             self.train_record = {'best_model_name': '', 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20}
         
         
-        if self.cfg.RESUME:
+        if self.cfg.RESUME_PATH != '':
             self.optimizer = optim.Adam(params)
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
@@ -85,7 +88,7 @@ class Trainer():
             
             model_dict = self.net.state_dict()
             load_dict = []
-            load_weights = []
+            load_weights = ["mask_predict_layer","scale_loc_head"]
             for k, v in state_dict.items():
                 sign = 0
                 for module in load_weights:
@@ -129,10 +132,10 @@ class Trainer():
                 
             
             self.lr_scheduler_base = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_Base,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[0])
+                                    cycle_mult=2,max_lr=self.cfg.LR_BASE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[0])
             
             self.lr_scheduler_thre = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_Thre,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[1,2])
+                                    cycle_mult=2,max_lr=self.cfg.LR_THRE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[1,2])
 
                
             print("Finish loading pretrained model")
@@ -148,7 +151,7 @@ class Trainer():
         self.compute_kpi_loss = ComputeKPILoss(self,cfg)
 
         self.generate_gt = GenerateGT(cfg)
-        self.feature_scale = cfg.feature_scale
+        self.feature_scale = cfg.FEATURE_SCALE
         self.get_ROI_and_MatchInfo = get_ROI_and_MatchInfo( self.cfg.TRAIN_SIZE, self.cfg.ROI_RADIUS, feature_scale=self.feature_scale)
 
 
@@ -170,8 +173,8 @@ class Trainer():
         if self.cfg.PRETRAIN_PATH == '':
             lr1, lr2 = adjust_learning_rate(self.optimizer,
                                     self.epoch,
-                                    self.cfg.LR_Base,
-                                    self.cfg.LR_Thre,
+                                    self.cfg.LR_BASE,
+                                    self.cfg.LR_THRE,
                                     self.cfg.LR_DECAY)
 
         batch_loss = {'den':AverageMeter(), 'in':AverageMeter(), 'out':AverageMeter(), 'mask':AverageMeter(), 'con':AverageMeter(), 'scale_mask':AverageMeter(), 'scale_den':AverageMeter(), 'scale_io':AverageMeter()}
@@ -183,7 +186,7 @@ class Trainer():
             self.i_tb += 1
             img,target = data
 
-            if self.cfg.task == 'SP':
+            if self.cfg.TASK == 'SP':
                 flat_target = []
                 for tar_pair in target:
                     for tar in tar_pair:
@@ -192,7 +195,7 @@ class Trainer():
                 target = flat_target
                 img = torch.cat(img,0).cuda()
 
-            elif self.cfg.task == 'FT':
+            elif self.cfg.TASK == 'FT':
                 img = torch.stack(img,0).cuda()
             
 
@@ -255,11 +258,11 @@ class Trainer():
          
 
             
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt, confidence)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt,confidence)
             
 
 
-            all_loss = (kpi_loss + con_loss *cfg.con_alpha ).sum()
+            all_loss = (kpi_loss + con_loss * cfg.CON_WEIGHT ).sum()
 
 
 
@@ -277,7 +280,7 @@ class Trainer():
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
             batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
             batch_loss['out'].update(self.compute_kpi_loss.out_loss.sum().item())
-            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss_scales.sum().item())
+            batch_loss['mask'].update(self.compute_kpi_loss.mask_loss.sum().item())
             batch_loss['scale_den'].update(self.compute_kpi_loss.cnt_loss_scales.sum().item())
             batch_loss['con'].update(con_loss.item())
 
@@ -333,10 +336,9 @@ class Trainer():
 
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
-                self.timer['val time'].tic()
-                if self.cfg.task == "SP":
+                if self.cfg.TASK == "SP":
                     self.shift_validate()
-                elif self.cfg.task == "FT":
+                elif self.cfg.TASK == "FT":
                     self.validate()
                 self.net.train()
                 self.timer['val time'].toc(average=False)
@@ -680,16 +682,16 @@ if __name__=='__main__':
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
     cfg.EXP_NAME = now \
-    + '_' + cfg.backbone\
+    + '_' + cfg.BASK_BONE\
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
-    + '_' + str(cfg.LR_Base)\
-    + '_' + str(cfg.LR_Thre)
+    + '_' + str(cfg.LR_BASE)\
+    + '_' + str(cfg.LR_THRE)
 
 
-    cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.task)  # the path of logs, checkpoints, and current codes
+    cfg.EXP_PATH = os.path.join('../exp', cfg.DATASET, cfg.TASK)  # the path of logs, checkpoints, and current codes
     
-    cfg.mode = 'train'
+    cfg.MODE = 'train'
 
     assert cfg.DATASET == "HT21"
         
