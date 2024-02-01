@@ -1,6 +1,5 @@
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_5_iter_12000_mae_4.916_mse_5.741_seq_MAE_28.039_seq_MSE_28.039_WRAE_43.138_MIAE_4.153_MOAE_5.996.pth --GPU_ID 0
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_12_iter_30000_mae_8.822_mse_9.357_seq_MAE_13.376_seq_MSE_13.376_WRAE_20.578_MIAE_3.136_MOAE_5.321.pth --GPU_ID 0
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_6_iter_14000_mae_5.754_mse_6.674_seq_MAE_25.863_seq_MSE_25.863_WRAE_39.789_MIAE_3.800_MOAE_5.681.pth --GPU_ID 0
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_4_iter_9000_mae_2.737_mse_3.117_seq_MAE_40.197_seq_MSE_40.197_WRAE_61.841_MIAE_5.007_MOAE_6.759.pth --GPU_ID 0
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_4_iter_8000_mae_2.124_mse_2.727_seq_MAE_55.267_seq_MSE_55.267_WRAE_85.026_MIAE_7.802_MOAE_9.447.pth --GPU_ID 0
-python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/01-31_14-26_NoKPI_HT21_5e-05/ep_3_iter_7000_mae_6.316_mse_6.535_seq_MAE_65.499_seq_MSE_65.499_WRAE_100.768_MIAE_8.195_MOAE_9.817.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/02-01_09-02_NoKPI_DWD_HT21_5e-05/ep_5_iter_13000_mae_2.670_mse_3.200_seq_MAE_26.127_seq_MSE_26.127_WRAE_40.195_MIAE_3.879_MOAE_5.277.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/02-01_09-02_NoKPI_DWD_HT21_5e-05/ep_5_iter_11000_mae_4.358_mse_5.011_seq_MAE_21.425_seq_MSE_21.425_WRAE_32.961_MIAE_3.858_MOAE_5.349.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/02-01_09-02_NoKPI_DWD_HT21_5e-05/ep_4_iter_10000_mae_2.126_mse_2.580_seq_MAE_40.185_seq_MSE_40.185_WRAE_61.824_MIAE_5.836_MOAE_7.280.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/02-01_09-02_NoKPI_DWD_HT21_5e-05/ep_4_iter_9000_mae_3.215_mse_3.640_seq_MAE_49.844_seq_MSE_49.844_WRAE_76.684_MIAE_7.030_MOAE_8.006.pth --GPU_ID 0
+python test_HT21.py --MODEL_PATH /home/leohuang0511/SSSP/exp/HT21/FT/02-01_09-02_NoKPI_DWD_HT21_5e-05/ep_4_iter_8000_mae_4.126_mse_4.580_seq_MAE_45.110_seq_MSE_45.110_WRAE_69.401_MIAE_5.993_MOAE_7.716.pth --GPU_ID 0

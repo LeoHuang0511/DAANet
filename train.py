@@ -287,7 +287,7 @@ class Trainer():
                 self.writer.add_scalar('loss_in', batch_loss['in'].avg, self.i_tb)
                 self.writer.add_scalar('loss_out', batch_loss['out'].avg, self.i_tb)
                 self.writer.add_scalar('loss_con', batch_loss['con'].avg, self.i_tb)
-                # self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
+                self.writer.add_scalar('dynamic_weight',np.mean(self.compute_kpi_loss.dynamic_weight), self.i_tb)
 
 
                 self.writer.add_scalar('base_lr', lr1, self.i_tb)
