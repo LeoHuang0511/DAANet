@@ -642,6 +642,7 @@ if __name__=='__main__':
 
     parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
     parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
+    parser.add_argument('--CNT_WEIGHT', type=float, default=10)
     parser.add_argument('--MASK_WEIGHT', type=float, default=1)
     parser.add_argument('--IO_WEIGHT', type=float, default=1)
 
@@ -682,7 +683,7 @@ if __name__=='__main__':
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
     cfg.EXP_NAME = now \
-    + '_' + cfg.BASK_BONE\
+    + '_' + cfg.BACKBONE\
     + '_' + cfg.EXP_NAME\
     + '_' + cfg.DATASET \
     + '_' + str(cfg.LR_BASE)\
