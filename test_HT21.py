@@ -36,7 +36,7 @@ parser.add_argument(
     '--SKIP_FLAG', type=bool, default=True,
     help='To caculate the MIAE and MOAE, it should be False')
 parser.add_argument(
-    '--SAVE_FREQ', type=int, default=60,
+    '--SAVE_FREQ', type=int, default=20,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,
