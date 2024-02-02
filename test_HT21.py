@@ -191,21 +191,19 @@ def test(cfg, cfg_data):
 
                         img_pair_idx+=1
             
-                        if img_pair_idx % cfg.SAVE_FREQ == 0:
-                             if img_pair_idx % cfg.SAVE_FREQ == 0:
-                                gt_den_scales = torch.zeros_like(den_scales)
-                                gt_mask = torch.zeros_like(mask)
+                        # if img_pair_idx % cfg.SAVE_FREQ == 0:
+                        #      if img_pair_idx % cfg.SAVE_FREQ == 0:
+                        #         gt_den_scales = den_scales
+                        #         gt_mask = torch.zeros_like(mask)
+                        #         gt_io_map = torch.zeros_like(pred_map).reshape(2,2,pred_map.shape[-2],-1)
                                           
-
-
-
-                                save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
-                                    img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                    pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales,\
-                                    [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
-
+                                
+                        #         save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
+                        #             img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                        #             pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(),  gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
+                        #             (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                        #             f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
+                        #             [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
     #                    
     # +
             scenes_pred_dict.append(pred_dict)

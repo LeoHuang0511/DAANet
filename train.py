@@ -697,6 +697,8 @@ if __name__=='__main__':
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=1)
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
+    parser.add_argument('--VAL_INTERVALS', type=int, default=50)
+
 
 
 
@@ -738,8 +740,9 @@ if __name__=='__main__':
 
     if cfg.DATASET == "SENSE":
         cfg.TRAIN_FRAME_INTERVALS = [5,12]
+        cfg.VAL_INTERVALS = 8
 
-    cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2
+    # cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2
 
     if not os.path.exists(cfg.EXP_PATH ):
         os.makedirs(cfg.EXP_PATH )
