@@ -37,7 +37,7 @@ parser.add_argument(
     '--TEST_INTERVALS', type=int, default=62,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--SAVE_FREQ', type=int, default=20,
+    '--SAVE_FREQ', type=int, default=2,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,
@@ -221,6 +221,15 @@ def test(cfg, cfg_data):
                     print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.cpu().numpy(),2)}')
 
                     img_pair_idx+=1
+                    if img_pair_idx % cfg.SAVE_FREQ == 0:
+
+
+                        save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
+                                img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
+                                (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, \
+                                [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
             scenes_pred_dict.append(pred_dict)
             scenes_gt_dict.append(gt_dict)
 

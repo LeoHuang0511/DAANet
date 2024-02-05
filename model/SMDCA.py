@@ -145,8 +145,8 @@ class SMDCANet(nn.Module):
         # out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
         # in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
         
-        out_den = dens[0::2,:,:,:].detach() * mask[:img_pair_num,:,:,:]
-        in_den = dens[1::2,:,:,:].detach() * mask[img_pair_num:,:,:,:]
+        out_den = dens[0::2,:,:,:].clone().detach() * mask[:img_pair_num,:,:,:]
+        in_den = dens[1::2,:,:,:].clone().detach() * mask[img_pair_num:,:,:,:]
 
 
 
@@ -179,10 +179,10 @@ class SMDCAlignment(nn.Module):
         # )
         # self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
 
-        self.weight_conv = nn.Sequential(
-                                ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-                                ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
-        )
+        # self.weight_conv = nn.Sequential(
+        #                         ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
+        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
+        # )
 
         self.feature_head = nn.ModuleList()
         self.multi_scale_dcn_alignment = nn.ModuleList()

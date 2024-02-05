@@ -182,7 +182,7 @@ def test(cfg, cfg_data):
                     
                     assert pred_map.size() == gt_den.size()
 
-                    gt_io_map = torch.zeros(img_pair_num, 4, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+                    gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
 
                     gt_in_cnt = torch.zeros(img_pair_num).detach()
                     gt_out_cnt = torch.zeros(img_pair_num).detach()
