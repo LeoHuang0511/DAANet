@@ -30,7 +30,7 @@ parser.add_argument(
     '--TASK', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--OUPUT_DIR', type=str, default='../test_demo',
+    '--OUTPUT_DIR', type=str, default='../test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--TEST_INTERVALS', type=int, default=10,
@@ -118,7 +118,7 @@ def test(cfg, cfg_data):
         sing_cnt_errors = {'mae': AverageMeter(), 'mse': AverageMeter()}
 
 
-        if cfg.skip_flag:
+        if cfg.SKIP_FLAG:
             intervals = 1
         else:
             intervals = cfg.TEST_INTERVALS
@@ -159,7 +159,7 @@ def test(cfg, cfg_data):
                 else:
                     frame_signal = 'skip'
 
-                if frame_signal == 'match' or not cfg.skip_flag:
+                if frame_signal == 'match' or not cfg.SKIP_FLAG:
 
                     den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
 
@@ -231,7 +231,7 @@ def test(cfg, cfg_data):
 
                     img_pair_idx+=1
         
-                    # if img_pair_idx % cfg.save_freq == 0:
+                    # if img_pair_idx % cfg.SAVE_FREQ == 0:
                         # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
                         #         img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                         #         pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
@@ -249,7 +249,7 @@ def test(cfg, cfg_data):
 
 #                         save_inflow_outflow_density(img, matched_results['scores'], matched_results['pre_points'],
 #                                                     matched_results['target'], matched_results['match_gt'],
-#                                                     osp.join(cfg.output_dir,scene_name), scene_name, vi, cfg.TEST_INTERVALS)
+#                                                     osp.join(cfg.OUTPUT_DIR,scene_name), scene_name, vi, cfg.TEST_INTERVALS)
 
             scenes_pred_dict['all'].append(pred_dict)
             scenes_gt_dict['all'].append(gt_dict)
@@ -271,7 +271,7 @@ def test(cfg, cfg_data):
             if scene_l[3] == 3: scenes_pred_dict['density3'].append(pred_dict);  scenes_gt_dict['density3'].append(gt_dict)
             if scene_l[3] == 4: scenes_pred_dict['density4'].append(pred_dict);  scenes_gt_dict['density4'].append(gt_dict)
         
-        dir = cfg.MODEL_PATH.replace('exp', cfg.output_dir).replace(cfg.MODEL_PATH.split('/')[-1],'' )
+        dir = cfg.MODEL_PATH.replace('exp', cfg.OUTPUT_DIR).replace(cfg.MODEL_PATH.split('/')[-1],'' )
         if not os.path.isdir(dir):
             os.makedirs(dir)
 
