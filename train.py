@@ -624,8 +624,9 @@ def compute_metrics_all_scenes(scenes_pred_dict, scene_gt_dict, intervals, targe
         if target:
             pre_crowdflow_cnt, gt_crowdflow_cnt, inflow_cnt, outflow_cnt = compute_metrics_single_scene(pre_dict, gt_dict,intervals,target)
         else:
-            gt_crowdflow_cnt = gt_dict
             pre_crowdflow_cnt, inflow_cnt, outflow_cnt = compute_metrics_single_scene(pre_dict, gt_dict,intervals,target)
+        if 'total_flow' in scene_gt_dict[0].keys():
+            gt_crowdflow_cnt = scene_gt_dict[0]['total_flow'][i]
 
         # print(pre_crowdflow_cnt)
         # print(gt_crowdflow_cnt)
@@ -694,7 +695,7 @@ if __name__=='__main__':
 
 
     #_test or val
-    parser.add_argument('--VAL_FREQ', type=int, default=2000)
+    parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=1)
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
     parser.add_argument('--VAL_INTERVALS', type=int, default=50)

@@ -31,7 +31,7 @@ parser.add_argument(
     '--TASK', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--OUPUT_DIR', type=str, default='../test_demo',
+    '--OUTPUT_DIR', type=str, default='../test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--TEST_INTERVALS', type=int, default=62,
@@ -103,33 +103,34 @@ def test(cfg, cfg_data):
         # sing_cnt_errors = {'cnt_mae': AverageMeter(), 'cnt_mse': AverageMeter(), 'flow_mae':AverageMeter(), 'flow_mae_inv':AverageMeter(),\
         #                        'flow_mse':AverageMeter(), 'flow_mse_inv':AverageMeter(), 'flow_mape':AverageMeter(), 'flow_mape_inv':AverageMeter(),\
         #                         "MIAE":AverageMeter()}
+        scenes_pred_dict = []
+        gt_flow_cnt = [232,204,278,82,349]
+        scene_names = ['11','12','13','14','15']
         generate_gt = GenerateGT(cfg)
         get_roi_and_matchinfo = get_ROI_and_MatchInfo( cfg.TRAIN_SIZE, cfg.ROI_RADIUS, feature_scale=cfg.FEATURE_SCALE)
 
         
         sing_cnt_errors = {'mae': AverageMeter(), 'mse': AverageMeter()}
 
-        scenes_pred_dict = []
         scenes_gt_dict =  []
 
         intervals = 1
         
         for scene_id, sub_valset in enumerate(test_loader, 0):
-            # if scene_id>2:
-            #     break
             gen_tqdm = tqdm(sub_valset)
             video_time = len(sub_valset) + cfg.TEST_INTERVALS
             print(video_time)
+            scene_name = scene_names[scene_id]
+
 
             pred_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
-            gt_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
+            gt_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': [], 'total_flow': gt_flow_cnt}
             img_pair_idx = 0
             for vi, data in enumerate(gen_tqdm, 0):
                 img, target = data
-                # import pdb
-                # pdb.set_trace()
+
                 img,target = img[0], target[0]
-                scene_name = target[0]['scene_name']
+                # scene_name = target[0]['scene_name']
                 img = torch.stack(img, 0).cuda()
                 b, c, h, w = img.shape
                 if h % 64 != 0:
@@ -150,7 +151,11 @@ def test(cfg, cfg_data):
                 else:
                     frame_signal = 'skip'
 
-                if frame_signal == 'match':
+                if frame_signal == 'skip':
+                        
+                        continue
+
+                else:
 
                     den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
 
@@ -206,8 +211,8 @@ def test(cfg, cfg_data):
 
                     pred_dict['inflow'].append(pre_inflow)
                     pred_dict['outflow'].append(pre_outflow)
-                    gt_dict['inflow'].append(torch.tensor(gt_in_cnt))
-                    gt_dict['outflow'].append(torch.tensor(gt_out_cnt))
+                    gt_dict['inflow'].append(torch.tensor(gt_in_cnt).clone().detach())
+                    gt_dict['outflow'].append(torch.tensor(gt_out_cnt).clone().detach())
 
                     pre_crowdflow_cnt, gt_crowdflow_cnt, _, _ = compute_metrics_single_scene(pred_dict, gt_dict, 1)
 
@@ -216,7 +221,6 @@ def test(cfg, cfg_data):
                     print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.cpu().numpy(),2)}')
 
                     img_pair_idx+=1
-# +
             scenes_pred_dict.append(pred_dict)
             scenes_gt_dict.append(gt_dict)
 
@@ -233,7 +237,7 @@ def test(cfg, cfg_data):
         final_result = {'DEN_MAE':mae, 'DEN_MSE':mse, 'seq_MAE':MAE, 'seq_MSE':MSE, 'WRAE':WRAE, 'MIAE':MIAE, 'MOAE':MOAE}
         
         print(final_result)
-        save_test_logger(cfg, cfg.output_dir, cnt_result, final_result)
+        save_test_logger(cfg, cfg.OUTPUT_DIR, cnt_result, final_result)
         
 
 

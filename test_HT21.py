@@ -92,7 +92,6 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
-        # net = video_crowd_count(cfg, cfg_data)
         net = SMDCANet(cfg, cfg_data)
 
         test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
@@ -107,6 +106,7 @@ def test(cfg, cfg_data):
         net.cuda()
         net.eval()
         scenes_pred_dict = []
+        scenes_gt_dict = []
         gt_flow_cnt = [133,737,734,1040,321]
         scene_names = ['HT21-11','HT21-12','HT21-13','HT21-14','HT21-15']
 
@@ -122,6 +122,8 @@ def test(cfg, cfg_data):
             scene_name = scene_names[scene_id]
 
             pred_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
+            gt_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': [], 'total_flow': gt_flow_cnt}
+            
             img_pair_idx = 0
             for vi, data in enumerate(gen_tqdm, 0):
                     img, _ = data
@@ -157,14 +159,6 @@ def test(cfg, cfg_data):
                         # den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
                         den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
                         
-
-
-
-
-                        
-
-
-
 
                         pre_inf_cnt, pre_out_cnt = \
                             in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
@@ -207,10 +201,11 @@ def test(cfg, cfg_data):
     #                    
     # +
             scenes_pred_dict.append(pred_dict)
+            scenes_gt_dict.append(gt_dict)
 
 
         
-        MAE,MSE, WRAE, crowdflow_cnt  = compute_metrics_all_scenes(scenes_pred_dict, gt_flow_cnt, intervals, target=False)
+        MAE,MSE, WRAE, crowdflow_cnt  = compute_metrics_all_scenes(scenes_pred_dict, scenes_gt_dict, intervals, target=False)
         # print('MAE: %.2f, MSE: %.2f  WRAE: %.2f' % (MAE.data, MSE.data, WRAE.data))
         print('MAE: %.2f, MSE: %.2f  WRAE: %.2f' % (MAE.data, MSE.data, WRAE.data))
         print(crowdflow_cnt)
