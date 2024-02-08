@@ -22,6 +22,8 @@ def adjust_learning_rate(optimizer, epoch,base_lr1=0, base_lr2=0, power=0.9):
     optimizer.param_groups[0]['lr'] = lr1
     optimizer.param_groups[1]['lr'] = lr2
     optimizer.param_groups[2]['lr'] = lr2
+    optimizer.param_groups[3]['lr'] = lr1
+
 
     return lr1 , lr2
 
