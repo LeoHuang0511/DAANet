@@ -46,7 +46,7 @@ class SMDCANet(nn.Module):
 
 
         self.confidence_predict_layer = nn.Sequential(
-            nn.Dropout2d(0.2),
+            #nn.Dropout2d(0.2),
 
             nn.Conv2d(384, 64, kernel_size=1, stride=1, padding=0),
 

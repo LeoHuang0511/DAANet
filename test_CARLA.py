@@ -269,7 +269,7 @@ if __name__=='__main__':
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
 
-    # os.environ["CUDA_VISIBLE_DEVICES"] = opt.GPU_ID
+    os.environ["CUDA_VISIBLE_DEVICES"] = opt.GPU_ID
     torch.backends.cudnn.benchmark = True
 
     # ------------prepare data loader------------
