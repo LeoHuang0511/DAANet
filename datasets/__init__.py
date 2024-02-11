@@ -24,7 +24,7 @@ class train_pair_transform(object):
         self.last_cw_ch =(0,0)
         self.crop_left = (0,0)
         self.last_crop_left = (0, 0)
-        self.rate_range = (0.8,1.2)
+        self.rate_range = cfg_data.CROP_RATE
         # self.rate_range = (1.0,1.4)
 
         self.resize_and_crop= own_transforms.RandomCrop( cfg_data.TRAIN_SIZE)
@@ -32,6 +32,7 @@ class train_pair_transform(object):
 
         self.flip_flag = 0
         self.horizontal_flip = own_transforms.RandomHorizontallyFlip()
+
 
         self.last_frame_size = (0,0)
 
@@ -42,15 +43,12 @@ class train_pair_transform(object):
         
         if self.pair_flag == 1 and self.check_dim:  # make sure two frames are with the same shape
             assert self.last_frame_size == (w_ori,w_ori)
-            # self.last_frame_size = (w_ori, w_ori)
           # make sure the img size is large than we needed
         
         if self.pair_flag % 2 == 0:
             self.scale_factor = random.uniform(self.rate_range[0], self.rate_range[1])
 
             self.c_h,self.c_w = int(self.cfg_data.TRAIN_SIZE[0]/self.scale_factor), int(self.cfg_data.TRAIN_SIZE[1]/self.scale_factor)
-            # ratio = self.cfg_data.TRAIN_SIZE[0]/self.cfg_data.TRAIN_SIZE[1]
-            # self.c_h,self.c_w = int((w_ori*ratio)/self.scale_factor), int(w_ori/self.scale_factor)
             
             img, target = check_image(img, target, (self.c_h,self.c_w))
             w, h = img.size
@@ -66,40 +64,21 @@ class train_pair_transform(object):
         else:
             img, target = check_image(img, target, (self.c_h,self.c_w))
 
-#         if self.pair_flag % 2 == 1:
-#         img, target = check_image(img, target, (self.c_h,self.c_w))
-            
-#             if self.check_dim:
-#                 x1 = max(0, int(self.last_crop_left[0] + (self.last_cw_ch[0]-self.c_w)))
-#                 y1 = max(0, int(self.last_crop_left[1] + (self.last_cw_ch[1]-self.c_h)))
-#             else:   # for pre_training on other dataset
-#                 x1 = random.randint(0, w - self.c_w)
-#                 y1 = random.randint(0, h - self.c_h)
-            
-#         self.crop_left = (x1, y1)
-        # print(self.last_crop_left)
         img, target = self.resize_and_crop(img, target, self.crop_left,crop_size=(self.c_h,self.c_w))
-        # img, target = self.resize_and_crop(img, target, self.last_crop_left,crop_size=(self.c_h,self.c_w))
-
         img, target = self.scale_to_setting(img,target)
-
         img, target = self.horizontal_flip(img, target, self.flip_flag)
         self.pair_flag += 1
 
-        # assert np.array(img).sum()>0
+
+
         return img, target
     
 
 
 
 
-
-
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
-    # return torch.utils.data.dataloader.default_collate(batch)
-    # if len(batch) == 0:
-    #     import pdb;pdb.set_trace()
     return tuple(zip(*batch))
 
 def createTrainData(datasetname, Dataset, cfg, cfg_data):
@@ -126,26 +105,7 @@ def createTrainData(datasetname, Dataset, cfg, cfg_data):
     print('dataset is {}, images num is {}'.format(datasetname, train_set.__len__()))
 
     return  train_loader
-# def createValData(datasetname, Dataset, cfg_data):
-#     img_transform = standard_transforms.Compose([
-#         standard_transforms.ToTensor(),
-#         standard_transforms.Normalize(*cfg_data.MEAN_STD)
-#     ])
 
-#     val_loader = []
-#     with open(os.path.join( cfg_data.DATA_PATH, cfg_data.VAL_LST), 'r') as txt:
-#         scene_names = txt.readlines()
-#     for scene in scene_names:
-#         sub_val_dataset = Dataset([scene.strip()],
-#                                   cfg_data.DATA_PATH,
-#                                   main_transform=None,
-#                                   img_transform= img_transform ,
-#                                   train=False,
-#                                   datasetname=datasetname)
-#         sub_val_loader = DataLoader(sub_val_dataset, batch_size=cfg_data.VAL_BATCH_SIZE, num_workers=4,collate_fn=collate_fn,pin_memory=False )
-#         val_loader.append(sub_val_loader)
-
-#     return  val_loader
 def createRestore(mean_std):
     return standard_transforms.Compose([
         own_transforms.DeNormalize(*mean_std),
@@ -155,33 +115,17 @@ def createRestore(mean_std):
 def loading_data(cfg):
     datasetname = cfg.DATASET.upper()
     cfg_data = getattr(setting, datasetname).cfg_data
-    
-    if cfg.TASK == 'SP':
-        train_Dataset = dataset.ShiftPretrainDataset
-        train_loader = Shift_createData(datasetname, train_Dataset, cfg, cfg_data, mode='train')
-    #     train_loader = createTrainData(datasetname, Dataset, cfg_data)
-        restore_transform = createRestore(cfg.MEAN_STD)
 
-        val_Dataset = dataset.ShiftPretrainDataset
-        val_loader = Shift_createData(datasetname, val_Dataset, cfg, cfg_data, mode='val')
+    train_Dataset = dataset.Dataset
 
+    train_loader = createTrainData(datasetname, train_Dataset, cfg, cfg_data)
+    restore_transform = createRestore(cfg.MEAN_STD)
 
-        return train_loader, val_loader, restore_transform
-
-    elif cfg.TASK == 'FT':
-        train_Dataset = dataset.Dataset
-        # print(cfg_data)
-
-        train_loader = createTrainData(datasetname, train_Dataset, cfg, cfg_data)
-    #     train_loader = createTrainData(datasetname, Dataset, cfg_data)
-        restore_transform = createRestore(cfg.MEAN_STD)
-
-        Dataset = dataset.TestDataset
-        val_loader = createValTestData(datasetname, Dataset, cfg, cfg_data, mode ='val')
+    Dataset = dataset.TestDataset
+    val_loader = createValTestData(datasetname, Dataset, cfg, cfg_data, mode ='val')
 
 
-        return train_loader, val_loader, restore_transform
-#     return train_loader, val_loader, restore_transform
+    return train_loader, val_loader, restore_transform
 
 def createValTestData(datasetname, Dataset, cfg, cfg_data,mode ='val'):
     img_transform = standard_transforms.Compose([
@@ -229,104 +173,6 @@ def loading_testset(cfg, mode='test'):
 
     restore_transform = createRestore(cfg.MEAN_STD)
     return test_loader, restore_transform
-
-
-
-def Shift_createData(datasetname, Dataset, cfg, cfg_data, mode='train'):
-    img_transform = standard_transforms.Compose([
-        standard_transforms.ToTensor(),
-        standard_transforms.Normalize(*cfg.MEAN_STD)
-        
-    ])
-
-    
-
-    if mode == 'train':
-        main_transform = train_pair_transform(cfg)
-        txt_path = cfg_data.TRAIN_LST
-        shuffle = True
-        batch_size = cfg.TRAIN_BATCH_SIZE
-        
-    else:
-        main_transform = None
-        shuffle = False
-        batch_size = cfg.VAL_BATCH_SIZE
-
-
-
-        if mode == 'val':
-            txt_path = cfg_data.VAL_LST
-
-        elif mode == 'test':
-            txt_path = cfg_data.TEST_LST
-
-
-    set =Dataset(txt_path,
-                    cfg_data.DATA_PATH,
-                    cfg,
-                    main_transform=main_transform,
-                    img_transform=img_transform,
-                    datasetname=datasetname)
-    sampler = samplers.ShiftSampler(set.labels, n_per=batch_size)
-    
-    loader = DataLoader(set, batch_sampler=sampler, num_workers=cfg.WORKER, collate_fn=collate_fn, pin_memory=True)
-   
-
-    print('dataset is {}, images num is {}'.format(datasetname, set.__len__()))
-
-    return  loader
-
-# def ShiftPretrain_createValTestData(datasetname, Dataset, cfg, cfg_data,mode ='val'):
-#     img_transform = standard_transforms.Compose([
-#         standard_transforms.ToTensor(),
-#         standard_transforms.Normalize(*cfg.MEAN_STD)
-#     ])
-#     # main_transform = test_transform(cfg_data)
-#     main_transform = shift_aug()
-
-
-#     if mode == 'val':
-#         with open(os.path.join( cfg_data.DATA_PATH, cfg_data.VAL_LST), 'r') as txt:
-#             scene_names = txt.readlines()
-#             scene_names = [i.strip() for i in scene_names]
-#         data_loader = []
-#         for scene_name in scene_names:
-#             print(scene_name)
-#             sub_dataset = Dataset(scene_name = scene_name,
-#                                   base_path=cfg_data.DATA_PATH,
-#                                   main_transform=main_transform,
-#                                   img_transform=img_transform,
-#                                   interval=cfg.VAL_INTERVALS,
-#                                   target=True,
-#                                   datasetname = datasetname)
-#             sub_loader = DataLoader(sub_dataset, batch_size=cfg.VAL_BATCH_SIZE,
-#                                     collate_fn=collate_fn, num_workers=0, pin_memory=True)
-#             data_loader.append(sub_loader)
-#         return data_loader
-#     elif mode == 'test':
-#         if datasetname=='HT21':
-#             target = False
-#             scene_names = ['test/HT21-11', 'test/HT21-12', 'test/HT21-13', 'test/HT21-14', 'test/HT21-15']
-#         else:
-#             target =True
-            
-#             with open(os.path.join( cfg_data.DATA_PATH, cfg_data.TEST_LST), 'r') as txt:
-#                 scene_names = txt.readlines()
-#                 scene_names = [i.strip() for i in scene_names]
-#         data_loader = []
-#         for scene_name in scene_names:
-#             print(scene_name)
-#             sub_dataset = Dataset(scene_name=scene_name,
-#                                   base_path=cfg_data.DATA_PATH,
-#                                   main_transform=main_transform,
-#                                   img_transform=img_transform,
-#                                   interval=cfg.VAL_INTERVALS,
-#                                   target=target,
-#                                   datasetname=datasetname)
-#             sub_loader = DataLoader(sub_dataset, batch_size=cfg.VAL_BATCH_SIZE,
-#                                     collate_fn=collate_fn, num_workers=0, pin_memory=True)
-#             data_loader.append(sub_loader)
-#         return data_loader
 
 
 

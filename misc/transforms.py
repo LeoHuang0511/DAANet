@@ -170,6 +170,8 @@ class ScaleByRateWithMin(object):
             return img, gt
         else:
             return img
+        
+
 
 def check_image(img,target, crop_size):
     w, h = img.size
@@ -317,7 +319,179 @@ class tensormul(object):
     def __call__(self, _tensor):
         _tensor.mul_(self.mu)
         return _tensor
+
+class RandomGammaColor(object):
+    """ Applies a power transform to the image by a random value. The value is
+    sampled from an uniform distribution according to the given boundaries.
+
+    Args:
+        range_min: float:
+            The minimum value of the uniform distribution.
+        range_max: float:
+            The maximum value of the uniform distribution.
+        pixel_min: float:
+            The minimum valid value of a pixel of the image.
+        pixel_max: float:
+            The maximum valid value of a pixel of the image.
+        independent: bool: optional, default False
+            if True, one different value is sampled for each image of the
+            batch. If False, all images are multiplied by the same value.
+    """
+    def __init__(self,
+                 range_min: float,
+                 range_max: float,
+                 pixel_min: float,
+                 pixel_max: float,
+                 independent: bool = False) -> None:
+        self.range_min = range_min
+        self.range_max = range_max
+        self.pixel_min = pixel_min
+        self.pixel_max = pixel_max
+        self.independent = independent
+        self.interval = range_max - range_min
+        self.pixel_interval = pixel_max - pixel_min
+        self.pair_flag = 0
+        
+
+    def __call__(self, img):  # dot, flow):
+        # if self.independent:
+        #     expo_vals = torch.rand([img.shape[0]])
+        # else:
+        #     expo_vals = torch.rand([1])
+        #     expo_vals = expo_vals.repeat(img.shape[0])
+        if self.pair_flag % 2 == 0:
+        
+            expo_vals = torch.rand([1])
+            
+            expo_vals = expo_vals.type(img.dtype)
+            expo_vals = expo_vals.to(img.device)
+            expo_vals *= self.interval
+            expo_vals += self.range_min
+            expo_vals = torch.pow(expo_vals, -1.0)
+            self.last_expo_vals = expo_vals
+
+        else:
+            expo_vals = self.last_expo_vals
+
+        # expo_vals = expo_vals.reshape(-1, 1, 1, 1)
+        img = (
+            torch.pow((img-self.pixel_min)/self.pixel_interval, expo_vals) *
+            self.pixel_interval + self.pixel_min)
+        self.pair_flag += 1
+        return img
+       
+
+
+# class BaseTransform(object):
+#     @abstractmethod
+#     def __call__(self,
+#                  images: Any,
+#                  flows: Any) -> Tuple[Any, Any]:
+#         pass
+# class AddGaussianNoise(BaseTransform):
+#     """ Adds noise to the image by summing each pixel to a value sampled from
+#     a normal distribution.
+
+#     Args:
+#         stdev: float:
+#             The standard deviation value for the normal distribution.
+#     """
+#     def __init__(self,
+#                  stdev: float) -> None:
+#         self.stdev = stdev
+
+#     def __call__(self,
+#                  images: torch.Tensor,
+#                  flows: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+#         noise = torch.normal(0.0, self.stdev, images.shape)
+#         noise = noise.type(images.dtype)
+#         noise = noise.to(images.device)
+#         images += noise
+#         return images, flows
     
+
+    
+class RandomMultiplicativeColor(object):
+    """ Multiplies the image by a random value. The value is sampled from an
+    uniform distribution according to the given boundaries.
+
+    Args:
+        range_min: float:
+            The minimum value of the uniform distribution.
+        range_max: float:
+            The maximum value of the uniform distribution.
+        independent: bool: optional, default False
+            if True, one different value is sampled for each image of the
+            batch. If False, all images are multiplied by the same value.
+    """
+    def __init__(self,
+                 range_min: float,
+                 range_max: float,
+                 independent: bool = False) -> None:
+        self.range_min = range_min
+        self.range_max = range_max
+        self.independent = independent
+        self.interval = range_max - range_min
+        self.pair_flag = 0
+
+    def __call__(self, img):
+        # if self.independent:
+        #     mult_vals = torch.rand([img.shape[0]])
+        # else:
+        #     mult_vals = torch.rand([1])
+        #     mult_vals = mult_vals.repeat(img.shape[0])
+        if self.pair_flag%2==0:
+            mult_vals = torch.rand([1])
+
+            mult_vals = mult_vals.type(img.dtype)
+            mult_vals = mult_vals.to(img.device)
+            mult_vals *= self.interval
+            mult_vals += self.range_min
+            self.last_mult_vals = mult_vals
+        else:
+            mult_vals = self.last_mult_vals
+        # mult_vals = mult_vals.reshape(-1, 1, 1, 1)
+        img *= mult_vals
+        self.pair_flag+=1
+        return img
+
+class RandomAdditiveColor(object):
+    """ Adds a random value to the image. The value is sampled from a normal
+    distribution.
+
+    Args:
+        stdev: float:
+            The standard deviation value for the normal distribution.
+        independent: bool: optional, default False
+            if True, one different value is sampled for each image of the
+            batch. If False, the same value is added to all images.
+    """
+    def __init__(self,
+                 stdev: float,
+                 independent: bool = False) -> None:
+        self.stdev = stdev
+        self.independent = independent
+        self.pair_flag = 0
+
+    def __call__(self,img):
+        # if self.independent:
+        #     add_vals = torch.normal(0.0, self.stdev, [img.shape[0]])
+        # else:
+        #     add_vals = torch.normal(0.0, self.stdev, [1])
+        #     add_vals = add_vals.repeat(img.shape[0])
+        if self.pair_flag%2==0:
+            add_vals = torch.normal(0.0, self.stdev, [1])
+            
+            add_vals = add_vals.type(img.dtype)
+            add_vals = add_vals.to(img.device)
+            self.last_add_vals = add_vals
+        else:
+            add_vals = self.last_add_vals
+
+        # add_vals = add_vals.reshape(-1, 1, 1, 1)
+        img += add_vals
+        self.pair_flag+=1
+        return img
 
 
 

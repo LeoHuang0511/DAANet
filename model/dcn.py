@@ -82,7 +82,6 @@ class DeformableConv2d(nn.Module):
         offset_map = offset_range * 2 * torch.sigmoid(offset_map) - offset_range
 
        
-        # offset = offset_visualization(offset_map, 8)
 
         modulator = 2. * torch.sigmoid(self.modulator_conv(warp_ref))
 
@@ -112,15 +111,7 @@ class MultiColumnOffsetConv(nn.Module):
             nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=i+1, stride=stride, padding=i+1,bias=True),
         ))
             
-        # self.column1 = nn.Sequential(
-        #     nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=1, stride=stride, padding=1,bias=True),
-        # )
-        # self.column2 = nn.Sequential(
-        #     nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=2, stride=stride, padding=2, bias=True),
-        # )
-        # self.column3 = nn.Sequential(
-        #     nn.Conv2d(in_dim, 2 * kernel_size[0] * kernel_size[1], kernel_size=kernel_size, dilation=3, stride=stride, padding=3,bias=True),
-        # )
+       
         
         self.offset_conv = nn.Conv2d(int(2 * kernel_size[0] * kernel_size[1] * (3-scale)), 
                                 2 * kernel_size[0] * kernel_size[1], 
@@ -136,7 +127,7 @@ class MultiColumnOffsetConv(nn.Module):
         nn.init.constant_(self.offset_conv.bias, 0.)
 
     def forward(self, x):
-        # x2 = torch.cat([self.column1(x), self.column2(x), self.column3(x)], dim=1)
+
         x2 = []
         for i in range(3-self.scale):
             x2.append(self.column[i](x))

@@ -17,6 +17,7 @@ from tensorboardX import SummaryWriter
 
 
 def adjust_learning_rate(optimizer, epoch,base_lr1=0, base_lr2=0, power=0.9):
+    
     lr1 =  base_lr1 * power ** ((epoch-1))
     lr2 =  base_lr2 * power ** ((epoch - 1))
     optimizer.param_groups[0]['lr'] = lr1

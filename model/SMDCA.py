@@ -46,7 +46,6 @@ class SMDCANet(nn.Module):
 
 
         self.confidence_predict_layer = nn.Sequential(
-            #nn.Dropout2d(0.2),
 
             nn.Conv2d(384, 64, kernel_size=1, stride=1, padding=0),
 
@@ -59,7 +58,7 @@ class SMDCANet(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.Conv2d(32, 3, kernel_size=1, stride=1, padding=0),
-#             nn.Sigmoid(),
+            
             
             
         )
@@ -93,9 +92,6 @@ class SMDCANet(nn.Module):
             den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
             dens.append(F.interpolate(den_scales[scale], scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale))
 
-        #     f = torch.cat([f_out[scale],  f_in[scale]],dim=0)
-        #     mask = self.mask_predict_layer[scale](f)
-        #     masks.append(mask)
 
             feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE)) # (b*2, 128, h/conf_block_size, w/conf_block_size)
         
@@ -109,10 +105,6 @@ class SMDCANet(nn.Module):
         dens = torch.sum(dens, dim=1).unsqueeze(1)
 
 
-        # conf = F.adaptive_avg_pool2d(confidences, output_size=feature[0].shape[2:])
-        # feature =torch.cat([feature[0] * conf[:,0,:,:].unsqueeze(1),  \
-        #                     F.interpolate(feature[1],scale_factor=2,mode='bilinear',align_corners=True) * conf[:,1,:,:].unsqueeze(1),
-        #                     F.interpolate(feature[2],scale_factor=4, mode='bilinear',align_corners=True) * conf[:,2,:,:].unsqueeze(1)], dim=1)
 
         feature1 = []
         feature2 = []
@@ -137,15 +129,8 @@ class SMDCANet(nn.Module):
 
 
 
-        # mask_prob = torch.softmax(mask, dim=1)
         mask = torch.sigmoid(mask)
         
-        # den_prob = torch.sum(mask_prob[:,1:3,:,:], dim=1).unsqueeze(1)
-        # io_prob = mask_prob[:,1,:,:].unsqueeze(1)
-
-
-        # out_den = dens[0::2,:,:,:] * io_prob[:img_pair_num,:,:,:]
-        # in_den = dens[1::2,:,:,:] * io_prob[img_pair_num:,:,:,:]
         
         out_den = dens[0::2,:,:,:].clone().detach() * mask[:img_pair_num,:,:,:]
         in_den = dens[1::2,:,:,:].clone().detach() * mask[img_pair_num:,:,:,:]
@@ -153,8 +138,6 @@ class SMDCANet(nn.Module):
 
 
 
-        # return  den_scales, masks, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
-        # return  den_scales, dens, mask, out_den, in_den, den_prob, io_prob, confidences, flow, back_flow, feature1, feature2, attn_1, attn_2
         return  den_scales, dens, mask, out_den, in_den, mask, mask, confidences, flow, back_flow, f1, f2, attn_1, attn_2
 
 
@@ -166,26 +149,7 @@ class SMDCAlignment(nn.Module):
         
         self.channel_size = num_feat
 
-        # self.feature_head = nn.Sequential(
-        #                         nn.Dropout2d(0.2),
-
-        #                         # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-        #                         # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
-        #                         ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-
-        #                         nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1, bias=False),
-        #                         nn.BatchNorm2d(self.channel_size*2, momentum=BN_MOMENTUM),
-        #                         nn.ReLU(inplace=True),
-        #                         nn.Conv2d(self.channel_size*2, self.channel_size*2, kernel_size=3, stride=1, padding=1)
-        # )
-        # self.multi_scale_dcn_alignment = DeformableConv2d(cfg, self.channel_size*2, self.channel_size*2, offset_groups=4, kernel_size=3, mult_column_offset=True)
-
-        # self.weight_conv = nn.Sequential(
-        #                         ResBlock(in_dim=self.channel_size*4, out_dim=self.channel_size*2, dilation=0, norm="bn"),
-        #                         ResBlock(in_dim=self.channel_size*2, out_dim=self.channel_size, dilation=0, norm="bn")
-        # )
-
+     
         self.feature_head = nn.ModuleList()
         self.multi_scale_dcn_alignment = nn.ModuleList()
 
@@ -193,8 +157,6 @@ class SMDCAlignment(nn.Module):
             self.feature_head.append(nn.Sequential(
                                 nn.Dropout2d(0.2),
 
-                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size*3, dilation=0, norm="bn"),
-                                # ResBlock(in_dim=self.channel_size*3, out_dim=self.channel_size, dilation=0, norm="bn")
                                 ResBlock(in_dim=self.channel_size, out_dim=self.channel_size, dilation=0, norm="bn"),
 
                                 nn.Conv2d(self.channel_size, self.channel_size, kernel_size=3, stride=1, padding=1, bias=False),
@@ -207,7 +169,6 @@ class SMDCAlignment(nn.Module):
             )
 
 
-        
         
 
         self.weight_conv = nn.Sequential(
@@ -224,16 +185,7 @@ class SMDCAlignment(nn.Module):
 
         
        
-        # f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
-        #               F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        # f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
-        #               F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-
-        
-        # f1 = self.feature_head(f1)
-        # f2 = self.feature_head(f2)
-        # f1_aligned, f_flow = self.multi_scale_dcn_alignment(f1, f2)
-        # f2_aligned, b_flow = self.multi_scale_dcn_alignment(f2, f1)
+       
 
         f_flow = []
         b_flow = []
@@ -273,7 +225,7 @@ class SMDCAlignment(nn.Module):
         f_mask = torch.cat([f_out,  f_in],dim=0)
 
 
-            
+
     
         return f_mask, f_flow, b_flow, attn_1, attn_2, f1, f2
 

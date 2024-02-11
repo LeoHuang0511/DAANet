@@ -251,7 +251,7 @@ class Trainer():
                                                                             match_gt, pois, 
                                                                             count_in_pair, 
                                                                             self.feature_scale)
-            con_loss /= cfg.TRAIN_BATCH_SIZE
+            # con_loss /= cfg.TRAIN_BATCH_SIZE
             
             gt_mask = (gt_io_map>0).float()
 
@@ -631,7 +631,7 @@ if __name__=='__main__':
 
 
     parser.add_argument('--LR_MIN', type=float, default=1e-6)
-    parser.add_argument('--LR_BASE', type=float, default=5e-5, help='density branch')
+    parser.add_argument('--LR_BASE', type=float, default=1e-5, help='density branch')
     parser.add_argument('--LR_THRE', type=float, default=1e-4, help='mask branch')
     parser.add_argument('--LR_DECAY', type=float, default=0.95)
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
@@ -640,11 +640,11 @@ if __name__=='__main__':
     parser.add_argument('--WORKER', type=int, default=4)
 
 
-    parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
+    parser.add_argument('--CON_WEIGHT', type=float, default=0.25)
     parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
     parser.add_argument('--CNT_WEIGHT', type=float, default=10)
     parser.add_argument('--MASK_WEIGHT', type=float, default=1)
-    parser.add_argument('--IO_WEIGHT', type=float, default=1)
+    parser.add_argument('--IO_WEIGHT', type=float, default=0.5)
 
 
 
@@ -664,6 +664,8 @@ if __name__=='__main__':
     parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
     parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
+    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.8,1.2])
+
 
 
 

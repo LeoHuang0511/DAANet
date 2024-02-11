@@ -52,6 +52,7 @@ class VGG16_FPN(nn.Module):
                              
                                 ResBlock(in_dim=192, out_dim=128, dilation=0, norm="bn"),
                                 ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
+
                 
                                 
             ))
@@ -72,21 +73,12 @@ class VGG16_FPN(nn.Module):
 
                                 nn.Conv2d(16, 1, kernel_size=1, stride=1, padding=0),
                                 nn.ReLU(inplace=True)
+                              
                             ))
             
             
-        # self.feature_head = nn.ModuleList()
-        # for i in range(len(in_channels)):
-        #     self.feature_head.append(nn.Sequential(
-        #                     nn.Dropout2d(0.2),
-        #                     ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
-        #                     ResBlock(in_dim=128, out_dim=128, dilation=0, norm="bn"),
 
-        #                     nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1, bias=False),
-        #                     BatchNorm2d(128, momentum=BN_MOMENTUM),
-        #                     nn.ReLU(inplace=True),
-        #                     nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        # ))
+           
 
 
     def forward(self, x):
@@ -114,8 +106,7 @@ class VGG16_FPN(nn.Module):
 
 
         f_mask = self.neck2f(f_list)
-        # for scale in range(len(f_mask)):
-        #     f_mask[scale] = self.feature_head[scale](f_mask[scale])
+       
         
 
 

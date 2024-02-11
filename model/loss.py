@@ -67,8 +67,8 @@ class ComputeKPILoss(object):
         
 
         assert (pre_outflow_map.shape == gt_io_map[:,0:1,:,:].shape) and (pre_inflow_map.shape == gt_io_map[:,1:2,:,:].shape)
-        self.out_loss = F.mse_loss(pre_outflow_map,  gt_io_map[:,0:1,:,:],reduction = 'sum') / self.cfg.TRAIN_BATCH_SIZE
-        self.in_loss = F.mse_loss(pre_inflow_map, gt_io_map[:,1:2,:,:], reduction='sum') / self.cfg.TRAIN_BATCH_SIZE
+        self.out_loss = F.mse_loss(pre_outflow_map,  gt_io_map[:,0:1,:,:],reduction = 'sum') 
+        self.in_loss = F.mse_loss(pre_inflow_map, gt_io_map[:,1:2,:,:], reduction='sum') 
         
 
 
@@ -78,7 +78,7 @@ class ComputeKPILoss(object):
         # gt_cnt = gt_den_scales[0].sum()
         # pre_cnt = den.sum()
         # self.task_KPI.add({'den': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt - gt_cnt).abs()) },\
-        #                 'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
+        #                'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
         #                 max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt - gt_in_cnt).abs().sum() - (pre_out_cnt - gt_out_cnt).abs().sum()) }})
 
         # self.KPI = self.task_KPI.query()
@@ -104,12 +104,8 @@ class ComputeKPILoss(object):
             
         avg_dynamic_weight = sum(self.dynamic_weight) / len(self.dynamic_weight)
         
-        # loss = scale_loss  + all_loss[0] + all_loss[1]
-        # loss = scale_loss  + (self.cnt_loss * self.cfg.CNT_WEIGHT) + \
-        #         (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
-        # loss = scale_loss  + avg_dynamic_weight * all_loss[0] + all_loss[1]
         loss = scale_loss  + avg_dynamic_weight * (self.cnt_loss * self.cfg.CNT_WEIGHT) + \
-                (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
+               (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
         return loss
 
 
@@ -147,9 +143,9 @@ class ComputeKPILoss(object):
         except:
             topk = exp_term[idx0]
 
-        denominator = torch.sum(topk,dim=1)   #分母 denominator
-        numerator = exp_term[idx0, idx1]   #分子 numerator  c個重複  c個loss
-        loss =  torch.sum(-torch.log(numerator / denominator +1e-7)) 
+        denominator = torch.sum(topk,dim=1)   # denominator
+        numerator = exp_term[idx0, idx1]   # numerator 
+        loss =  torch.sum(-torch.log(numerator / denominator +1e-7))
         
 
         return loss
