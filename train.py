@@ -533,8 +533,8 @@ if __name__=='__main__':
     cfg.MODE = 'train'
 
     if cfg.DATASET == "SENSE":
-        cfg.TRAIN_FRAME_INTERVALS = [5,12]
-        cfg.VAL_INTERVALS = 8
+        cfg.TRAIN_FRAME_INTERVALS = [5,17]
+        cfg.VAL_INTERVALS = 10
         cfg.SAVE_VIS_FREQ = 2500
         cfg.VAL_FREQ = 2500
 
