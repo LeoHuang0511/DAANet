@@ -340,6 +340,9 @@ class Trainer():
             sing_cnt_errors = {'mae': AverageMeter(), 'mse': AverageMeter()}
             scenes_pred_dict = []
             scenes_gt_dict = []
+            gt_flow_cnt = [232,204,278,82,349]
+            scene_names = ['11','12','13','14','15']
+            
             
             for scene_id, sub_valset in  enumerate(self.val_loader, 0):
 
@@ -348,7 +351,7 @@ class Trainer():
                 print(video_time)
 
                 pred_dict = {'id': scene_id, 'time':video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
-                gt_dict  = {'id': scene_id, 'time':video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}    
+                gt_dict  = {'id': scene_id, 'time':video_time, 'first_frame': 0, 'inflow': [], 'outflow': [],'total_flow': gt_flow_cnt}    
                    
                 for vi, data in enumerate(gen_tqdm, 0):
                     img, target = data
@@ -472,6 +475,11 @@ class Trainer():
             self.writer.add_scalar('WRAE', WRAE, self.i_tb)
             self.writer.add_scalar('MIAE', MIAE, self.i_tb)
             self.writer.add_scalar('MOAE', MOAE, self.i_tb)
+            self.writer.add_scalar('11', cnt_result[0,0], self.i_tb)
+            self.writer.add_scalar('12', cnt_result[1,0], self.i_tb)
+            self.writer.add_scalar('13', cnt_result[2,0], self.i_tb)
+            self.writer.add_scalar('14', cnt_result[3,0], self.i_tb)
+            self.writer.add_scalar('15', cnt_result[4,0], self.i_tb)
 
 
             self.train_record = update_model(self,{'mae':mae, 'mse':mse, 'seq_MAE':MAE, 'seq_MSE':MSE, 'WRAE':WRAE, 'MIAE': MIAE, 'MOAE': MOAE },val=True)

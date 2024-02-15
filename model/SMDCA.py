@@ -43,9 +43,13 @@ class SMDCANet(nn.Module):
 
             nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
             )
+        # nn.init.constant_(self.mask_predict_layer[-1].weight, 0.)
+        # nn.init.constant_(self.mask_predict_layer[-1].bias, 0.)
 
 
         self.confidence_predict_layer = nn.Sequential(
+            #nn.Dropout2d(0.2),
+
 
             nn.Conv2d(384, 64, kernel_size=1, stride=1, padding=0),
 
@@ -101,6 +105,8 @@ class SMDCANet(nn.Module):
         confidences = self.confidence_predict_layer(f_con)
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
         confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
+        
+        # attention = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
 
         dens = torch.sum(dens, dim=1).unsqueeze(1)
 
@@ -111,11 +117,12 @@ class SMDCANet(nn.Module):
         for scale in range(len(feature)):
             
             conf = confidences[:,scale,:,:].detach().unsqueeze(1)
+            # conf = torch.sigmoid(confidences[:,scale,:,:].detach().unsqueeze(1))
+
             conf = F.adaptive_avg_pool2d(conf, feature[scale].shape[2:])
 
 
     
-            # feature[scale] = F.sigmoid(conf) * feature[scale]
             feature[scale] = conf * feature[scale]
 
            
@@ -137,8 +144,9 @@ class SMDCANet(nn.Module):
 
 
 
-
         return  den_scales, dens, mask, out_den, in_den, mask, mask, confidences, flow, back_flow, f1, f2, attn_1, attn_2
+
+        # return  den_scales, dens, mask, out_den, in_den, mask, mask, attention, flow, back_flow, f1, f2, attn_1, attn_2
 
 
 

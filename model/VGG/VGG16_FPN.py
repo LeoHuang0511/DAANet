@@ -57,7 +57,7 @@ class VGG16_FPN(nn.Module):
                                 
             ))
             self.scale_loc_head.append(nn.Sequential(
-
+             
 
                                 nn.ConvTranspose2d(128, 64, 2, stride=2, padding=0, output_padding=0, bias=False),
                                 nn.BatchNorm2d(64, momentum=BN_MOMENTUM),

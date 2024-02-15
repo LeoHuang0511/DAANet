@@ -20,7 +20,7 @@ class ComputeKPILoss(object):
         self.cfg = cfg
         self.trainer = trainer
         
-        # self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
+        self.task_KPI=Task_KPI_Pool(task_setting={'den': ['gt_cnt', 'pre_cnt'], 'mask': ['gt_cnt', 'acc_cnt']}, maximum_sample=1000)
         
         self.DEN_FACTOR = cfg.DEN_FACTOR
         self.gt_generater = GenerateGT(cfg)
@@ -67,34 +67,11 @@ class ComputeKPILoss(object):
         
 
         assert (pre_outflow_map.shape == gt_io_map[:,0:1,:,:].shape) and (pre_inflow_map.shape == gt_io_map[:,1:2,:,:].shape)
-        self.out_loss = F.mse_loss(pre_outflow_map,  gt_io_map[:,0:1,:,:],reduction = 'sum') 
-        self.in_loss = F.mse_loss(pre_inflow_map, gt_io_map[:,1:2,:,:], reduction='sum') 
+        self.out_loss = F.mse_loss(pre_outflow_map,  gt_io_map[:,0:1,:,:],reduction = 'sum') /self.cfg.TRAIN_BATCH_SIZE
+        self.in_loss = F.mse_loss(pre_inflow_map, gt_io_map[:,1:2,:,:], reduction='sum') /self.cfg.TRAIN_BATCH_SIZE
         
 
 
-
-
-        # # KPI loss
-        # gt_cnt = gt_den_scales[0].sum()
-        # pre_cnt = den.sum()
-        # self.task_KPI.add({'den': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt - gt_cnt).abs()) },\
-        #                'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
-        #                 max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt - gt_in_cnt).abs().sum() - (pre_out_cnt - gt_out_cnt).abs().sum()) }})
-
-        # self.KPI = self.task_KPI.query()
-
-        # loss = torch.stack([self.cnt_loss * self.cfg.CNT_WEIGHT, (self.out_loss + self.in_loss) * self.cfg.IO_WEIGHT + self.mask_loss * self.cfg.MASK_WEIGHT])
-
-        # weight = torch.stack([self.KPI['den'],self.KPI['mask']]).to(loss.device)
-
-        # weight = -(1-weight) * torch.log(weight+1e-8)
-        # self.weight = weight/weight.sum()
-
-        # all_loss = self.weight*loss
-
-
-        
-        
         if self.trainer.i_tb == 1:
             self.init_scale_loss = scale_loss.item()
         self.dynamic_weight.append((self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16))
@@ -103,10 +80,39 @@ class ComputeKPILoss(object):
             assert len(self.dynamic_weight) == 1000
             
         avg_dynamic_weight = sum(self.dynamic_weight) / len(self.dynamic_weight)
+
+
+
+
+
+        # KPI loss
+        gt_cnt = gt_den_scales[0].sum()
+        pre_cnt = den.sum()
+        self.task_KPI.add({'den': {'gt_cnt': gt_cnt, 'pre_cnt': max(0,gt_cnt - (pre_cnt - gt_cnt).abs()) },\
+                       'mask': {'gt_cnt' : gt_out_cnt.sum()+gt_in_cnt.sum(), 'acc_cnt': \
+                        max(0,gt_out_cnt.sum()+gt_in_cnt.sum() - (pre_inf_cnt - gt_in_cnt).abs().sum() - (pre_out_cnt - gt_out_cnt).abs().sum()) }})
+
+        self.KPI = self.task_KPI.query()
+
+        loss = torch.stack([scale_loss  + avg_dynamic_weight * (self.cnt_loss * self.cfg.CNT_WEIGHT), \
+                            (self.out_loss + self.in_loss) * self.cfg.IO_WEIGHT + self.mask_loss * self.cfg.MASK_WEIGHT])
+
+        weight = torch.stack([self.KPI['den'],self.KPI['mask']]).to(loss.device)
+
+        weight = -(1-weight) * torch.log(weight+1e-8)
+        self.weight = weight/weight.sum()
+
+        all_loss = self.weight*loss
+
+
         
-        loss = scale_loss  + avg_dynamic_weight * (self.cnt_loss * self.cfg.CNT_WEIGHT) + \
-               (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
-        return loss
+        
+       
+        
+        # loss = scale_loss  + avg_dynamic_weight * (self.cnt_loss * self.cfg.CNT_WEIGHT) + \
+        #        (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
+        # return loss
+        return all_loss
 
 
     def compute_con_loss(self, pair_idx, feature1, feature2, match_gt, pois, count_in_pair, feature_scale):
