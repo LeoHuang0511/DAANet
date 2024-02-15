@@ -540,7 +540,7 @@ if __name__=='__main__':
 
 
 
-    cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2
+    # cfg.VAL_INTERVALS = (cfg.TRAIN_FRAME_INTERVALS[0]+cfg.TRAIN_FRAME_INTERVALS[1])//2
 
     if not os.path.exists(cfg.EXP_PATH ):
         os.makedirs(cfg.EXP_PATH )
