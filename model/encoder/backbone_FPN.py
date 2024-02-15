@@ -1,9 +1,7 @@
 from  torchvision import models
-import sys
 import torch.nn.functional as F
 from misc.utils import *
 from misc.layer import *
-# from torchsummary import summary
 from model.necks import FPN
 from .conv import ResBlock, BasicConv
 
@@ -11,9 +9,9 @@ BatchNorm2d = nn.BatchNorm2d
 BN_MOMENTUM = 0.01
 
 # +
-class VGG16_FPN(nn.Module):
+class backbone_FPN(nn.Module):
     def __init__(self,cfg):
-        super(VGG16_FPN, self).__init__()
+        super(backbone_FPN, self).__init__()
 
         self.cfg = cfg
         if cfg.BACKBONE == "swin":

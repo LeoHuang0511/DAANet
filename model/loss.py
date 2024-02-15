@@ -106,12 +106,6 @@ class ComputeKPILoss(object):
 
 
         
-        
-       
-        
-        # loss = scale_loss  + avg_dynamic_weight * (self.cnt_loss * self.cfg.CNT_WEIGHT) + \
-        #        (self.mask_loss * self.cfg.MASK_WEIGHT) + ((self.in_loss + self.out_loss) * self.cfg.IO_WEIGHT)
-        # return loss
         return all_loss
 
 
@@ -122,9 +116,6 @@ class ComputeKPILoss(object):
         con_inter_loss =   self.contrastive_loss(mdesc0, mdesc1, match_gt['a2b'][:,0], match_gt['a2b'][:,1])
 
         return con_inter_loss.sum()
-
-    
-
 
 
     
@@ -145,7 +136,7 @@ class ComputeKPILoss(object):
         norm = torch.einsum('bn,bm->bnm',m0,m1) + 1e-7 # (n,m)
         exp_term = torch.exp(sim_matrix / (256 ** .5 )/ norm)[0]
         try:
-            topk = torch.topk(exp_term[idx0],50,dim = 1).values #(c,b) #取幾個negative 記得加回positive
+            topk = torch.topk(exp_term[idx0],50,dim = 1).values #(c,b) # # of negative 
         except:
             topk = exp_term[idx0]
 

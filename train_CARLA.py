@@ -4,11 +4,10 @@ import torch
 from torch import optim
 import datasets
 from misc.utils import *
-from model.SMDCA import SMDCANet
+from SSSP.src.model.video_people_flux import DutyMOFANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
-from misc.lr_scheduler import CosineAnnealingWarmupRestarts
 
 from misc.gt_generate import *
 
@@ -43,7 +42,7 @@ class Trainer():
         else:
             self.resume = False
 
-        self.net = SMDCANet(cfg, cfg_data).cuda()
+        self.net = DutyMOFANet(cfg, cfg_data).cuda()
 
 
         params = [
@@ -58,12 +57,8 @@ class Trainer():
         
         self.i_tb = 0
         self.epoch = 1
-        if cfg.TASK == "SP":
-            self.train_record = {'best_model_name': '', 'den_mae':1e20, 'den_mse':1e20, 'in_mae':1e20, 'in_mse':1e20,\
-                                                'out_mae':1e20, 'out_mse':1e20}
-
-        elif cfg.TASK == "FT":
-            self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
+       
+        self.train_record = {'best_model_name': '', 'mae': 1e20, 'mse': 1e20, 'seq_MAE':1e20,'seq_MSE':1e20, 'WRAE':1e20, 'MIAE': 1e20, 'MOAE': 1e20}
         
         
         if self.cfg.RESUME_PATH != '':
@@ -82,62 +77,8 @@ class Trainer():
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
 
-        if self.cfg.PRETRAIN_PATH != '':
-            state_dict = torch.load(self.cfg.PRETRAIN_PATH,map_location=self.device)
-            
-            model_dict = self.net.state_dict()
-            load_dict = []
-            load_weights = ["mask_predict_layer","scale_loc_head"]
-            for k, v in state_dict.items():
-                sign = 0
-                for module in load_weights:
-                    if module in k:
-                        sign += 1
-                        break
-                
-                if sign == 0:
-                    load_dict.append(k)
-
-            
-
-            print(f"Loading weights except {load_dict}......")
-            pretrain_weight = torch.load(self.cfg.PRETRAIN_PATH, map_location=self.device)
-            list = {k:v for k,v in pretrain_weight.items() if k in load_dict}
-
-            model_dict.update(list)
-            self.net.load_state_dict(model_dict, strict=True)
-
-
-            print("Finish loading pretrained model")
-
-            if cfg.FROZEN:
-                freeze_weights = ["Extractor.layer1","Extractor.layer2","Extractor.layer3","Extractor.neck","Extractor.neck2f"]
-
-                for name, child in self.net.named_children():
-                    for name_1, child_1 in child.named_children():
-                        for module in freeze_weights:
-                            if module in name + '.' + name_1:
-                                for param in child_1.parameters():
-                                    param.requires_grad = False
-                                print(f"{name_1}'s weights are frozen!")
-                for param in params:
-                    param["params"] = filter(lambda p:p.requires_grad, param["params"])
-                self.optimizer = optim.Adam(params)
-            else:
-                self.optimizer = optim.Adam(params)
-
-                
-            
-            self.lr_scheduler_base = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_BASE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[0])
-            
-            self.lr_scheduler_thre = CosineAnnealingWarmupRestarts(self.optimizer, first_cycle_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader)*2,\
-                                    cycle_mult=2,max_lr=self.cfg.LR_THRE,min_lr=self.cfg.LR_MIN, warmup_steps=self.cfg.WARMUP_EPOCH*len(self.train_loader),gamma=0.8,group_index=[1,2])
-
-               
-            print("Finish loading pretrained model")
-        else:
-            self.optimizer = optim.Adam(params)
+        
+        self.optimizer = optim.Adam(params)
 
 
         
@@ -182,17 +123,8 @@ class Trainer():
             self.i_tb += 1
             img,target = data
 
-            if self.cfg.TASK == 'SP':
-                flat_target = []
-                for tar_pair in target:
-                    for tar in tar_pair:
-                        flat_target.append(tar)
-
-                target = flat_target
-                img = torch.cat(img,0).cuda()
-
-            elif self.cfg.TASK == 'FT':
-                img = torch.stack(img,0).cuda()
+            
+            img = torch.stack(img,0).cuda()
             
 
             
@@ -323,10 +255,7 @@ class Trainer():
 
             if (self.i_tb % self.cfg.VAL_FREQ == 0) and  (self.i_tb > self.cfg.VAL_START):
                 self.timer['val time'].tic()
-                if self.cfg.TASK == "SP":
-                    self.shift_validate()
-                elif self.cfg.TASK == "FT":
-                    self.validate()
+                self.validate()
                 self.net.train()
                 self.timer['val time'].toc(average=False)
                 print('val time: {:.2f}s'.format(self.timer['val time'].diff))
@@ -381,7 +310,7 @@ class Trainer():
                     
                     else:
 
-                        den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+                        den_scales, final_den, _, out_den, in_den, _, _, _, _, _, _, _, _, _ = self.net(img)
 
                         
 

@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from model.SMDCA import SMDCANet
+from SSSP.src.model.video_people_flux import DutyMOFANet
 
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -27,7 +27,7 @@ parser.add_argument(
     '--TASK', type=str, default='FT',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--OUPUT_DIR', type=str, default='../test_demo',
+    '--OUPUT_DIR', type=str, default='./test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--TEST_INTERVALS', type=int, default=62,
@@ -92,7 +92,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
-        net = SMDCANet(cfg, cfg_data)
+        net = DutyMOFANet(cfg, cfg_data)
 
         test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
         device = torch.device("cuda:"+str(torch.cuda.current_device()))

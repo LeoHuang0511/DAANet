@@ -2,9 +2,8 @@ import torch
 import torchvision.ops
 from torch import nn
 import torch.nn.functional as F
-# from .MSDA import offset_visualization
 
-class DeformableConv2d(nn.Module):
+class MultiScaleDeformableConv(nn.Module):
     def __init__(self,
                  cfg,
                  in_channels,
@@ -19,7 +18,7 @@ class DeformableConv2d(nn.Module):
                  offset = None
                  ):
 
-        super(DeformableConv2d, self).__init__()
+        super(MultiScaleDeformableConv, self).__init__()
 
         self.cfg = cfg
         
@@ -115,11 +114,9 @@ class MultiColumnOffsetConv(nn.Module):
         
         self.offset_conv = nn.Conv2d(int(2 * kernel_size[0] * kernel_size[1] * (3-scale)), 
                                 2 * kernel_size[0] * kernel_size[1], 
-                                # kernel_size=3,
                                 kernel_size=1, 
                                 dilation=1, 
                                 stride=stride, 
-                                # padding=1,
                                 padding=0,
                                 bias=True)
 

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from .VGG.VGG16_FPN import VGG16_FPN
-from .dcn import DeformableConv2d
-from .VGG.conv import ResBlock
+from .encoder.backbone_FPN import backbone_FPN
+from .dcn import MultiScaleDeformableConv
+from .encoder.conv import ResBlock
 import torch.nn.functional as F
 
 BN_MOMENTUM = 0.01
@@ -12,16 +12,16 @@ BN_MOMENTUM = 0.01
 
 
 # +
-class SMDCANet(nn.Module):
+class DutyMOFANet(nn.Module):
 
     def __init__(self, cfg, cfg_data):
-        super(SMDCANet, self).__init__()
+        super(DutyMOFANet, self).__init__()
         self.cfg = cfg
 
-        self.Extractor = VGG16_FPN(cfg)
+        self.Extractor = backbone_FPN(cfg)
         num_feat = 128
         
-        self.deformable_alignment = SMDCAlignment(cfg, num_feat, scale_num=3)
+        self.deformable_alignment = MOFAlignment(cfg, num_feat, scale_num=3)
         
 
         self.mask_predict_layer = nn.Sequential(
@@ -72,13 +72,6 @@ class SMDCANet(nn.Module):
 
     
         self.cfg = cfg
-# -
-
-#         
-
-# +
-
-    
 
 
 
@@ -106,7 +99,6 @@ class SMDCANet(nn.Module):
         confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
         confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
         
-        # attention = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
 
         dens = torch.sum(dens, dim=1).unsqueeze(1)
 
@@ -117,7 +109,6 @@ class SMDCANet(nn.Module):
         for scale in range(len(feature)):
             
             conf = confidences[:,scale,:,:].detach().unsqueeze(1)
-            # conf = torch.sigmoid(confidences[:,scale,:,:].detach().unsqueeze(1))
 
             conf = F.adaptive_avg_pool2d(conf, feature[scale].shape[2:])
 
@@ -146,14 +137,13 @@ class SMDCANet(nn.Module):
 
         return  den_scales, dens, mask, out_den, in_den, mask, mask, confidences, flow, back_flow, f1, f2, attn_1, attn_2
 
-        # return  den_scales, dens, mask, out_den, in_den, mask, mask, attention, flow, back_flow, f1, f2, attn_1, attn_2
 
 
 
-class SMDCAlignment(nn.Module):
+class MOFAlignment(nn.Module):
 
     def __init__(self,cfg, num_feat, scale_num):
-        super(SMDCAlignment, self).__init__()
+        super(MOFAlignment, self).__init__()
         
         self.channel_size = num_feat
 
@@ -173,7 +163,7 @@ class SMDCAlignment(nn.Module):
                                 nn.Conv2d(self.channel_size, self.channel_size, kernel_size=3, stride=1, padding=1)
                                 ))
             self.multi_scale_dcn_alignment.append(
-                                DeformableConv2d(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True, scale=scale)
+                                MultiScaleDeformableConv(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True, scale=scale)
             )
 
 
