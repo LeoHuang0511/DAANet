@@ -107,8 +107,7 @@ class Trainer():
     def train(self): # training for all datasets
 
         self.net.train()
-        if self.cfg.PRETRAIN_PATH == '':
-            lr1, lr2 = adjust_learning_rate(self.optimizer,
+        lr1, lr2 = adjust_learning_rate(self.optimizer,
                                     self.epoch,
                                     self.cfg.LR_BASE,
                                     self.cfg.LR_THRE,
@@ -195,12 +194,7 @@ class Trainer():
             self.optimizer.zero_grad()
             all_loss.backward()
             self.optimizer.step()
-            if self.cfg.PRETRAIN_PATH != '':
-
-                lr1 = self.optimizer.param_groups[0]['lr']
-                lr2 = self.optimizer.param_groups[1]['lr']
-                self.lr_scheduler_base.step(self.i_tb)
-                self.lr_scheduler_thre.step(self.i_tb)
+           
 
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
             batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
@@ -495,8 +489,6 @@ if __name__=='__main__':
     parser.add_argument('--EXP_NAME', type=str, default='')
 
     parser.add_argument('--RESUME_PATH',type=str, default='')
-    parser.add_argument('--PRETRAIN_PATH',type=str, default='')
-    parser.add_argument('--FROZEN', default=False, action='store_true', help="frozen pretrained frontend weights")
 
 
     parser.add_argument('--GPU_ID', type=str, default='0')
@@ -549,12 +541,6 @@ if __name__=='__main__':
 
 
 
-
-    #_shift pretrain
-    parser.add_argument('--WIN_OFFSET_RANGE', type=int, nargs='+', default=[100,350])
-    parser.add_argument('--IMG_OFFSET_RANGE', type=int, nargs='+', default=[-100,100])
-
-
     parser.add_argument('--DEN_FACTOR', type=float, default=200.)
     parser.add_argument('--MEAN_STD', type=tuple, default=([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]))
 
@@ -583,8 +569,6 @@ if __name__=='__main__':
     if not os.path.exists(cfg.EXP_PATH ):
         os.makedirs(cfg.EXP_PATH )
 
-    if cfg.FROZEN:
-        assert cfg.PRETRAIN == True
     
     print(cfg)
 

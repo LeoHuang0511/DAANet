@@ -181,12 +181,7 @@ class Trainer():
             self.optimizer.zero_grad()
             all_loss.backward()
             self.optimizer.step()
-            if self.cfg.PRETRAIN_PATH != '':
-
-                lr1 = self.optimizer.param_groups[0]['lr']
-                lr2 = self.optimizer.param_groups[1]['lr']
-                self.lr_scheduler_base.step(self.i_tb)
-                self.lr_scheduler_thre.step(self.i_tb)
+           
 
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
             batch_loss['in'].update(self.compute_kpi_loss.in_loss.sum().item())
@@ -550,8 +545,7 @@ if __name__=='__main__':
     if not os.path.exists(cfg.EXP_PATH ):
         os.makedirs(cfg.EXP_PATH )
 
-    if cfg.FROZEN:
-        assert cfg.PRETRAIN == True
+  
     
     print(cfg)
 
