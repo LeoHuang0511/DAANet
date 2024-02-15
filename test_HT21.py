@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from SSSP.src.model.video_people_flux import DutyMOFANet
+from model.video_people_flux import DutyMOFANet
 
 from tqdm import tqdm
 import torch.nn.functional as F

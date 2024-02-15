@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from SSSP.src.model.video_people_flux import DutyMOFANet
+from model.video_people_flux import DutyMOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
@@ -231,26 +231,7 @@ def test(cfg, cfg_data):
 
                     img_pair_idx+=1
         
-                    # if img_pair_idx % cfg.SAVE_FREQ == 0:
-                        # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
-                        #         img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                        #         pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), \
-                        #         (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                        #         [f_flow,f_flow,f_flow] , [b_flow,b_flow,b_flow], [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
-                        #         [mask,mask,mask], [gt_mask_scales[0],gt_mask_scales[0],gt_mask_scales[0]], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
-#                     kpts0 = matched_results['pre_points'][0][:, 2:4].cpu().numpy()
-#                     kpts1 = matched_results['pre_points'][1][:, 2:4].cpu().numpy()
-
-#                     matches = matched_results['matches0'].cpu().numpy()
-#                     confidence = matched_results['matching_scores0'].cpu().numpy()
-#                     if kpts0.shape[0] > 0 and kpts1.shape[0] > 0:
-#                         save_visImg(kpts0, kpts1, matches, confidence, vi, img[0].clone(), img[1].clone(),
-#                                     cfg.TEST_INTERVALS, osp.join(cfg.output_dir,scene_name), None, None, scene_name, restore_transform)
-
-#                         save_inflow_outflow_density(img, matched_results['scores'], matched_results['pre_points'],
-#                                                     matched_results['target'], matched_results['match_gt'],
-#                                                     osp.join(cfg.OUTPUT_DIR,scene_name), scene_name, vi, cfg.TEST_INTERVALS)
-
+                 
             scenes_pred_dict['all'].append(pred_dict)
             scenes_gt_dict['all'].append(gt_dict)
 

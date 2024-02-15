@@ -4,7 +4,7 @@ import torch
 from torch import optim
 import datasets
 from misc.utils import *
-from SSSP.src.model.video_people_flux import DutyMOFANet
+from model.video_people_flux import DutyMOFANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
