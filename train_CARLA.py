@@ -487,14 +487,12 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--EXP_NAME', type=str, default='')
-
     parser.add_argument('--RESUME_PATH',type=str, default='')
 
 
     parser.add_argument('--GPU_ID', type=str, default='0')
     parser.add_argument('--SEED', type=int, default=3035)
     parser.add_argument('--DATASET', type=str, default='HT21')
-    parser.add_argument('--TASK', type=str, default='FT')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
     parser.add_argument('--BACKBONE', type=str, default='vgg')
@@ -512,9 +510,9 @@ if __name__=='__main__':
 
     parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
     parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
-    parser.add_argument('--CNT_WEIGHT', type=float, default=10)
+    parser.add_argument('--CNT_WEIGHT', type=float, default=1)
     parser.add_argument('--MASK_WEIGHT', type=float, default=1)
-    parser.add_argument('--IO_WEIGHT', type=float, default=1)
+    parser.add_argument('--IO_WEIGHT', type=float, default=2)
 
 
 
@@ -523,7 +521,7 @@ if __name__=='__main__':
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=0)
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-    # parser.add_argument('--VAL_INTERVALS', type=int, default=50)
+    parser.add_argument('--VAL_INTERVALS', type=int, default=50)
 
 
 
@@ -536,7 +534,7 @@ if __name__=='__main__':
     parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
     parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
-    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.8,1.2])
+    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.6,1.2])
 
 
 
