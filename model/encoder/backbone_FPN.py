@@ -15,7 +15,7 @@ class backbone_FPN(nn.Module):
 
         self.cfg = cfg
         if cfg.BACKBONE == "swin":
-            swin = models.swin_v2_b(weights='Swin_V2_B_Weights.IMAGENET1K_V1')
+            swin = models.swin_b(weights='Swin_B_Weights.IMAGENET1K_V1')
             features = list(swin.features.children())
             self.layer1 = nn.Sequential(*features[0:2])
             self.layer2 = nn.Sequential(*features[2:4])
