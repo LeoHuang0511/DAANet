@@ -37,7 +37,7 @@ parser.add_argument(
     '--TEST_INTERVALS', type=int, default=62,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--SAVE_FREQ', type=int, default=2,
+    '--SAVE_FREQ', type=int, default=20,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,

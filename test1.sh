@@ -1,4 +1,0 @@
-python test_CARLA.py --MODEL_PATH /nfs/home/leo0511/Research/SSSP/exp/CARLA/02-11_16-42_vgg_Crop07_13_CARLA_1e-05_0.0001/ep_6_iter_9000_mae_6.847_mse_7.829_seq_MAE_161.538_seq_MSE_161.538_WRAE_70.850_MIAE_10.490_MOAE_9.393.pth --GPU_ID 0
-python test_CARLA.py --MODEL_PATH /nfs/home/leo0511/Research/SSSP/exp/CARLA/02-11_16-42_vgg_Crop07_13_CARLA_1e-05_0.0001/ep_7_iter_11000_mae_7.792_mse_8.878_seq_MAE_128.053_seq_MSE_128.053_WRAE_56.164_MIAE_8.598_MOAE_7.635.pth --GPU_ID 0
-python test_CARLA.py --MODEL_PATH /nfs/home/leo0511/Research/SSSP/exp/CARLA/02-11_16-42_vgg_Crop07_13_CARLA_1e-05_0.0001/ep_8_iter_13000_mae_6.429_mse_7.463_seq_MAE_112.445_seq_MSE_112.445_WRAE_49.318_MIAE_7.443_MOAE_6.656.pth --GPU_ID 0
-python test_CARLA.py --MODEL_PATH /nfs/home/leo0511/Research/SSSP/exp/CARLA/02-11_16-42_vgg_Crop07_13_CARLA_1e-05_0.0001/ep_9_iter_14000_mae_5.180_mse_6.020_seq_MAE_48.136_seq_MSE_48.136_WRAE_21.112_MIAE_3.554_MOAE_2.802.pth --GPU_ID 0

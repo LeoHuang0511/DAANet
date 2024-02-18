@@ -495,7 +495,7 @@ if __name__=='__main__':
     parser.add_argument('--VAL_FREQ', type=int, default=1000)
     parser.add_argument('--VAL_START', type=int, default=0)
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-    parser.add_argument('--VAL_INTERVALS', type=int, default=50)
+    parser.add_argument('--VAL_INTERVALS', type=int, default=62)
 
 
 
@@ -508,7 +508,7 @@ if __name__=='__main__':
     parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
     parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
-    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.6,1.2])
+    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.8,1.2])
 
 
 
@@ -535,8 +535,10 @@ if __name__=='__main__':
     if cfg.DATASET == "SENSE":
         cfg.TRAIN_FRAME_INTERVALS = [5,17]
         cfg.VAL_INTERVALS = 10
-        cfg.SAVE_VIS_FREQ = 2500
+        cfg.SAVE_VIS_FREQ = 5000
         cfg.VAL_FREQ = 2500
+    elif cfg.DATASET == "CARLA":
+        cfg.CROP_RATE = [0.6, 1.4]
 
 
 
