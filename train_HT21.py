@@ -534,7 +534,7 @@ if __name__=='__main__':
 
 
     parser.add_argument('--LR_MIN', type=float, default=1e-6)
-    parser.add_argument('--LR_BASE', type=float, default=1e-5, help='density branch')
+    parser.add_argument('--LR_BASE', type=float, default=5e-5, help='density branch')
     parser.add_argument('--LR_THRE', type=float, default=1e-4, help='mask branch')
     parser.add_argument('--LR_DECAY', type=float, default=0.95)
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
@@ -569,7 +569,7 @@ if __name__=='__main__':
     parser.add_argument('--FEATURE_SCALE', type=float, default=1/4.)
     parser.add_argument('--GAUSSIAN_SIGMA', type=float, default=4)
     parser.add_argument('--CONF_BLOCK_SIZE', type=int, default=16)
-    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.6,1.2])
+    parser.add_argument('--CROP_RATE', type=float, nargs='+', default=[0.8,1.2])
 
 
 

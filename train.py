@@ -68,7 +68,6 @@ class Trainer():
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
             self.optimizer.load_state_dict(latest_state['optimizer'])
-            self.lr_scheduler.load_state_dict(latest_state['scheduler'])
             self.epoch = latest_state['epoch']
             self.i_tb = latest_state['i_tb']
             self.train_record = latest_state['train_record']
@@ -473,7 +472,7 @@ if __name__=='__main__':
 
 
     parser.add_argument('--LR_MIN', type=float, default=1e-6)
-    parser.add_argument('--LR_BASE', type=float, default=1e-5, help='density branch')
+    parser.add_argument('--LR_BASE', type=float, default=5e-5, help='density branch')
     parser.add_argument('--LR_THRE', type=float, default=1e-4, help='mask branch')
     parser.add_argument('--LR_DECAY', type=float, default=0.95)
     parser.add_argument('--WEIGHT_DECAY', type=float, default=1e-5)
@@ -492,10 +491,10 @@ if __name__=='__main__':
 
 
     #_test or val
-    parser.add_argument('--VAL_FREQ', type=int, default=1000)
+    parser.add_argument('--VAL_FREQ', type=int, default=2000)
     parser.add_argument('--VAL_START', type=int, default=0)
     parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
-    parser.add_argument('--VAL_INTERVALS', type=int, default=62)
+    parser.add_argument('--VAL_INTERVALS', type=int, default=50)
 
 
 
@@ -539,6 +538,8 @@ if __name__=='__main__':
         cfg.VAL_FREQ = 2500
     elif cfg.DATASET == "CARLA":
         cfg.CROP_RATE = [0.6, 1.4]
+        cfg.LR_BASE = 1e-5
+
 
 
 
