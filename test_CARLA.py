@@ -34,7 +34,7 @@ parser.add_argument(
     '--OUTPUT_DIR', type=str, default='./test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--TEST_INTERVALS', type=int, default=62,
+    '--TEST_INTERVALS', type=int, default=60,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SAVE_FREQ', type=int, default=20,
