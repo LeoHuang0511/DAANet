@@ -43,8 +43,6 @@ class DutyMOFANet(nn.Module):
 
             nn.Conv2d(4, 1, kernel_size=1, stride=1, padding=0),
             )
-        # nn.init.constant_(self.mask_predict_layer[-1].weight, 0.)
-        # nn.init.constant_(self.mask_predict_layer[-1].bias, 0.)
 
 
         self.confidence_predict_layer = nn.Sequential(
