@@ -483,9 +483,9 @@ if __name__=='__main__':
 
     parser.add_argument('--CON_WEIGHT', type=float, default=0.5)
     parser.add_argument('--SCALE_WEIGHT', type=float, nargs='+', default=[2,0.1,0.01])
-    parser.add_argument('--CNT_WEIGHT', type=float, default=1)
+    parser.add_argument('--CNT_WEIGHT', type=float, default=10)
     parser.add_argument('--MASK_WEIGHT', type=float, default=1)
-    parser.add_argument('--IO_WEIGHT', type=float, default=2)
+    parser.add_argument('--IO_WEIGHT', type=float, default=1)
 
 
 
@@ -537,7 +537,7 @@ if __name__=='__main__':
         cfg.SAVE_VIS_FREQ = 5000
         cfg.VAL_FREQ = 2500
     elif cfg.DATASET == "CARLA":
-        cfg.CROP_RATE = [0.6, 1.4]
+        cfg.CROP_RATE = [0.6, 1.2]
         cfg.LR_BASE = 1e-5
 
 
