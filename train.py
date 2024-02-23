@@ -520,6 +520,16 @@ if __name__=='__main__':
 
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
+    if cfg.DATASET == "SENSE":
+        cfg.TRAIN_FRAME_INTERVALS = [5,17]
+        cfg.VAL_INTERVALS = 10
+        cfg.SAVE_VIS_FREQ = 5000
+        cfg.VAL_FREQ = 2500
+    elif cfg.DATASET == "CARLA":
+        cfg.CROP_RATE = [0.6, 1.2]
+        cfg.LR_BASE = 1e-5
+        cfg.VAL_INTERVALS = 62
+
     cfg.EXP_NAME = now \
     + '_' + cfg.BACKBONE\
     + '_' + cfg.EXP_NAME\
@@ -531,14 +541,7 @@ if __name__=='__main__':
     
     cfg.MODE = 'train'
 
-    if cfg.DATASET == "SENSE":
-        cfg.TRAIN_FRAME_INTERVALS = [5,17]
-        cfg.VAL_INTERVALS = 10
-        cfg.SAVE_VIS_FREQ = 5000
-        cfg.VAL_FREQ = 2500
-    elif cfg.DATASET == "CARLA":
-        cfg.CROP_RATE = [0.6, 1.2]
-        cfg.LR_BASE = 1e-5
+    
 
 
 
