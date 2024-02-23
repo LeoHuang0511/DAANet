@@ -33,13 +33,13 @@ parser.add_argument(
     '--OUTPUT_DIR', type=str, default='./test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--TEST_INTERVALS', type=int, default=10,
+    '--TEST_INTERVALS', type=int, default=11,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--SKIP_FLAG', type=bool, default=False,
+    '--SKIP_FLAG', type=bool, default=True,
     help='if you need to caculate the MIAE and MOAE, it should be False')
 parser.add_argument(
-    '--SAVE_FREQ', type=int, default=20,
+    '--SAVE_FREQ', type=int, default=200,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SEED', type=int, default=3035,
