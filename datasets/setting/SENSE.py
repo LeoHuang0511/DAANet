@@ -8,10 +8,11 @@ cfg_data = __C_SENSE
 
 __C_SENSE.TRAIN_SIZE = (768,1024) # (848,1536) #
 __C_SENSE.DATA_PATH = '../../datasets/SENSE/'
+# __C_SENSE.TRAIN_LST = 'vis.txt'
+# __C_SENSE.VAL_LST =  'vis_val.txt'
 __C_SENSE.TRAIN_LST = 'train.txt'
 __C_SENSE.VAL_LST =  'val.txt'
 __C_SENSE.TEST_LST =  'test.txt'
-
 # +
 # __C_SENSE.MEAN_STD = (
 #     [117/255., 110/255., 105/255.], [67.10/255., 65.45/255., 66.23/255.]

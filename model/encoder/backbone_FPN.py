@@ -32,6 +32,25 @@ class backbone_FPN(nn.Module):
             self.layer3 = nn.Sequential(*features[33:43])
 
             in_channels = [256,512,512]
+
+        elif cfg.BACKBONE == "res101":
+            res101 = models.resnet101(weights='ResNet101_Weights.IMAGENET1K_V2')
+            features = list(res101.children())
+            self.layer1 = nn.Sequential(*features[0:5])
+            self.layer2 = nn.Sequential(*features[5:6])
+            self.layer3 = nn.Sequential(*features[6:7])
+
+            in_channels = [256,512,1024]
+
+        elif cfg.BACKBONE == "res50":
+            res50 = models.resnet50(weights='ResNet50_Weights.IMAGENET1K_V2')
+            features = list(res50.children())
+            self.layer1 = nn.Sequential(*features[0:5])
+            self.layer2 = nn.Sequential(*features[5:6])
+            self.layer3 = nn.Sequential(*features[6:7])
+
+            in_channels = [256,512,1024]
+
         self.neck = FPN(in_channels,192,len(in_channels))
 
         self.neck2f = FPN(in_channels, 128, len(in_channels))

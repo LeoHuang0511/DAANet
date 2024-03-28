@@ -139,6 +139,9 @@ def createValTestData(datasetname, Dataset, cfg, cfg_data,mode ='val'):
         lst = cfg_data.TEST_LST
         if datasetname=='HT21':
             target = False
+    elif mode == 'vis':
+        lst = cfg_data.VIS_LST
+
     else:
         lst = cfg_data.VAL_LST
 

@@ -523,8 +523,8 @@ if __name__=='__main__':
     if cfg.DATASET == "SENSE":
         cfg.TRAIN_FRAME_INTERVALS = [5,17]
         cfg.VAL_INTERVALS = 10
-        cfg.SAVE_VIS_FREQ = 5000
-        cfg.VAL_FREQ = 2500
+        # cfg.SAVE_VIS_FREQ = 5000
+        # cfg.VAL_FREQ = 2500
     elif cfg.DATASET == "CARLA":
         cfg.CROP_RATE = [0.6, 1.2]
         cfg.LR_BASE = 1e-5

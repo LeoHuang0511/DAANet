@@ -260,6 +260,8 @@ def test(cfg, cfg_data):
         with open(log_file, 'a') as f:
             f.write(f'iter: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
             f.write(f'model_path: {cfg.MODEL_PATH}\n\n')
+            f.write(f'test_intervals: {cfg.TEST_INTERVALS}\n\n')
+
             
         
 
@@ -281,7 +283,7 @@ def test(cfg, cfg_data):
                     np.save(os.path.join(dir + '/SENSE_cnt.py'),save_cnt_result.numpy())
 
                     print('Pre vs GT:', cnt_result)
-                    f.write(f'Pre vs GT: {cnt_result}\n')
+                    # f.write(f'Pre vs GT: {cnt_result}\n')
 
             f.write(f"{'-'*250}\n\n")
             
