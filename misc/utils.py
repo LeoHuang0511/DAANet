@@ -110,14 +110,14 @@ def save_test_logger(cfg, exp_path,cnt_result, final_result):
 
 
 
-def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch, img0, img1, den0, den1, out_map, in_map, gt_io_map, conf0, conf1,\
-                       f_flow,b_flow, attn_1,attn_2,den_scales, gt_den_scales, mask, gt_mask, den_probs, io_probs):
+def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch, img0, img1, den0, den1, out_map, in_map, gt_io_map, attn0, attn1,\
+                       f_flow, b_flow, den_scales, gt_den_scales, mask, gt_mask):
 
-    pil_to_tensor = standard_transforms.ToTensor()
 
     UNIT_H , UNIT_W = img0.size(2), img0.size(3)
-    # for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data,pred_map0, gt_map0, pred_map1, gt_map1, \
-    #                                  pred_mask_out, gt_mask_out, pred_mask_in, gt_mask_in, attn_1, attn_2)):
+
+    gaussian_kernel = 31
+    gaussian_sigma = 10
 
     if cfg.MODE == 'test':
         cfg.TRAIN_BATCH_SIZE = cfg.VAL_BATCH_SIZE
@@ -128,164 +128,114 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         [0, 255, 255],
     ]
     COLOR_MAP = np.array(COLOR_MAP, dtype="uint8")
-    COLOR_MAP_CONF = [
-        [0, 255, 0],
-        [230, 216, 173], #sky blue
-        [203, 192, 255], #pink
+    COLOR_MAP_ATTN = [
+        [255, 255, 0],
+        [255, 0, 255],
+        [0, 255, 255],
     ]
-    COLOR_MAP_CONF = np.array(COLOR_MAP_CONF, dtype="uint8")
+    COLOR_MAP_ATTN = np.array(COLOR_MAP_ATTN, dtype="uint8")
 
-    for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data, den0, den1, out_map, in_map, gt_io_map,  conf0, conf1)):
+    for idx, tensor in enumerate(zip(img0.cpu().data, img1.cpu().data, den0, den1, out_map, in_map, gt_io_map, attn0, attn1)):
         if idx > 1:  # show only one group
             break
 
         f_flow_map = []
         b_flow_map = []
-        # attn_1_map = []
-        # attn_2_map = []
-        feature_1_map = []
-        align_feature_2_map = []
-        feature_2_map = []
-        align_feature_1_map = []
         den_scales_1_map = []
         gt_den_scales_1_map = []
         den_scales_2_map = []
         gt_den_scales_2_map = []
-        mask_in_scales_1_map = []
-        gt_mask_in_scales_1_map = []
-        mask_out_scales_1_map = []
-        gt_mask_out_scales_1_map = []
-        den_prob_map_1 = []
-        io_prob_map_1 = []
-        den_prob_map_2 = []
-        io_prob_map_2 = []
+        attn_map_scale_1 = []
+        attn_map_scale_2 = []
 
-
-
+    
 
         pil_input0 = restore(tensor[0])
         pil_input1 = restore(tensor[1])
 
-        for i in range(len(f_flow)):
+        for i in range(len(den_scales)):
+            ########## offset map ###############
+
             f = f_flow[i][batch].permute(1,2,0).detach().cpu().numpy()
             b = b_flow[i][batch].permute(1,2,0).detach().cpu().numpy()
-            f_flow_map.append(cv2.resize(flow_to_image(f), (UNIT_W, UNIT_H)))
-            b_flow_map.append(cv2.resize(flow_to_image(b), (UNIT_W, UNIT_H)))
-            # print(attn_1[i][0][0].shape)
-        for i in range(len(attn_1)):
+            f = cv2.resize(flow_to_image(f), (UNIT_W, UNIT_H))
+            b = cv2.resize(flow_to_image(b), (UNIT_W, UNIT_H))
 
-            a1 = np.max(attn_1[i][0][batch].detach().cpu().numpy(), axis=0)
-            a2 = np.max(attn_2[i][0][batch].detach().cpu().numpy(), axis=0)
-            a1 = cv2.resize(a1[None,:].transpose(1,2,0), (UNIT_W, UNIT_H))
-            a2 = cv2.resize(a2[None,:].transpose(1,2,0), (UNIT_W, UNIT_H))
-            a1 = cv2.applyColorMap((255 * a1 / (a1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-            a2 = cv2.applyColorMap((255 * a2 / (a2.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
+            f_flow_map.append(Image.fromarray(f))
+            b_flow_map.append(Image.fromarray(b))
+        
 
-            a3 = np.max(attn_1[i][1][batch].detach().cpu().numpy(), axis=0)
-            a4 = np.max(attn_2[i][1][batch].detach().cpu().numpy(), axis=0)
-            a3 = cv2.resize(a3[None,:].transpose(1,2,0), (UNIT_W, UNIT_H))
-            a4 = cv2.resize(a4[None,:].transpose(1,2,0), (UNIT_W, UNIT_H))
-            a3 = cv2.applyColorMap((255 * a3 / (a3.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-            a4 = cv2.applyColorMap((255 * a4 / (a4.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
+            ########## density map ###############
 
-            a1 = cv2.cvtColor(a1, cv2.COLOR_BGR2GRAY)
-            a2=cv2.cvtColor(a2, cv2.COLOR_BGR2GRAY)
-            a3=cv2.cvtColor(a3, cv2.COLOR_BGR2GRAY)
-            a4=cv2.cvtColor(a4, cv2.COLOR_BGR2GRAY)
-            
-            
-            # attn_1_map.append(a1)
-            # attn_2_map.append(a2)
-            feature_1_map.append(a1)
-            align_feature_2_map.append(a3)
-            feature_2_map.append(a2)
-            align_feature_1_map.append(a4)
-
-
-        for i in range(len(den_scales)):
             den_scale_1 = den_scales[i][0].detach().cpu().numpy()
             den_scale_2 = den_scales[i][1].detach().cpu().numpy()
             gt_den_scale_1 = gt_den_scales[i][0].detach().cpu().numpy()
             gt_den_scale_2 = gt_den_scales[i][1].detach().cpu().numpy()
+
+            den_scale_1 = cv2.GaussianBlur(den_scale_1, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
+            den_scale_2 = cv2.GaussianBlur(den_scale_2, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
+            gt_den_scale_1 = cv2.GaussianBlur(gt_den_scale_1, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
+            gt_den_scale_2 = cv2.GaussianBlur(gt_den_scale_2, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
+
             den_scale_1 = cv2.resize(cv2.applyColorMap((255 * den_scale_1 / (den_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
             den_scale_2 = cv2.resize(cv2.applyColorMap((255 * den_scale_2 / (den_scale_2.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
             gt_den_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_den_scale_1 / (gt_den_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
             gt_den_scale_2 = cv2.resize(cv2.applyColorMap((255 * gt_den_scale_2 / (gt_den_scale_2.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+            
             den_scale_1 = cv2.cvtColor(den_scale_1, cv2.COLOR_BGR2RGB)
             den_scale_2 = cv2.cvtColor(den_scale_2, cv2.COLOR_BGR2RGB)
             gt_den_scale_1 = cv2.cvtColor(gt_den_scale_1, cv2.COLOR_BGR2RGB)
             gt_den_scale_2 = cv2.cvtColor(gt_den_scale_2, cv2.COLOR_BGR2RGB)
 
-            den_scales_1_map.append(den_scale_1)
-            den_scales_2_map.append(den_scale_2)
-            gt_den_scales_1_map.append(gt_den_scale_1)
-            gt_den_scales_2_map.append(gt_den_scale_2)
+            den_scales_1_map.append(Image.fromarray(den_scale_1))
+            den_scales_2_map.append(Image.fromarray(den_scale_2))
+            gt_den_scales_1_map.append(Image.fromarray(gt_den_scale_1))
+            gt_den_scales_2_map.append(Image.fromarray(gt_den_scale_2))
 
-
-            ########## mask ###############
-            mask_out_scale_1 = mask[i][0,:,:,:].detach().cpu().numpy()
-            mask_in_scale_1 =  mask[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy()
+            
             
 
-            # mask_out_scale_1 = np.argmax(mask[i][0,:,:,:].detach().cpu().numpy(), axis=0)
-            # mask_in_scale_1 =  np.argmax(mask[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy(),axis=0)
+            ########## attention map ###############
+
+            attn_1= cv2.resize(cv2.applyColorMap((255 * tensor[7][i] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
+            attn_2 = cv2.resize(cv2.applyColorMap((255 * tensor[8][i] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
+
+            attn_1 = Image.fromarray(cv2.cvtColor(attn_1, cv2.COLOR_BGR2RGB))
+            attn_2 = Image.fromarray(cv2.cvtColor(attn_2, cv2.COLOR_BGR2RGB))
+
+            attn_map_scale_1.append(attn_1)
+            attn_map_scale_2.append(attn_2)
+
+            tensor[7][i] = cv2.GaussianBlur( tensor[7][i], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+            tensor[8][i] = cv2.GaussianBlur( tensor[8][i], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+
             
-            gt_mask_out_scale_1 = gt_mask[i][0,0:1,:,:].detach().cpu().numpy()
-            gt_mask_in_scale_1 = gt_mask[i][0,1:2,:,:].detach().cpu().numpy()
-
-            # mask_out_scale_1 = cv2.resize(COLOR_MAP[mask_out_scale_1].squeeze(),  (UNIT_W, UNIT_H))
-            # mask_in_scale_1 = cv2.resize(COLOR_MAP[mask_in_scale_1].squeeze(),  (UNIT_W, UNIT_H))
-            # gt_mask_out_scale_1 = cv2.resize(COLOR_MAP[gt_mask_out_scale_1].squeeze(),  (UNIT_W, UNIT_H))
-            # gt_mask_in_scale_1 = cv2.resize(COLOR_MAP[gt_mask_in_scale_1].squeeze(),  (UNIT_W, UNIT_H))
-
-
-
-
-            mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_out_scale_1 / (mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * mask_in_scale_1 / (mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            gt_mask_out_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_out_scale_1 / (gt_mask_out_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            gt_mask_in_scale_1 = cv2.resize(cv2.applyColorMap((255 * gt_mask_in_scale_1 / (gt_mask_in_scale_1.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            
-            mask_out_scale_1 = cv2.cvtColor(mask_out_scale_1, cv2.COLOR_BGR2RGB)
-            mask_in_scale_1 = cv2.cvtColor(mask_in_scale_1, cv2.COLOR_BGR2RGB)
-            gt_mask_out_scale_1 = cv2.cvtColor(gt_mask_out_scale_1, cv2.COLOR_BGR2RGB)
-            gt_mask_in_scale_1 = cv2.cvtColor(gt_mask_in_scale_1, cv2.COLOR_BGR2RGB)
             
 
-            mask_out_scales_1_map.append(mask_out_scale_1)
-            mask_in_scales_1_map.append(mask_in_scale_1)
-            gt_mask_out_scales_1_map.append(gt_mask_out_scale_1)
-            gt_mask_in_scales_1_map.append(gt_mask_in_scale_1)
-
-
-
-
-            den_prob_1 = den_probs[i][0,:,:,:].detach().cpu().numpy()
-            den_prob_2 =  den_probs[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy()
-
-            io_prob_1 = io_probs[i][0,:,:,:].detach().cpu().numpy()
-            io_prob_2 =  io_probs[i][cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy()
-            
-            den_prob_1 = cv2.resize(cv2.applyColorMap((255 * den_prob_1).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            den_prob_2 = cv2.resize(cv2.applyColorMap((255 * den_prob_2).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            io_prob_1 = cv2.resize(cv2.applyColorMap((255 * io_prob_1 ).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            io_prob_2 = cv2.resize(cv2.applyColorMap((255 * io_prob_2 ).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-            den_prob_1 = cv2.cvtColor(den_prob_1, cv2.COLOR_BGR2RGB)
-            den_prob_2 = cv2.cvtColor(den_prob_2, cv2.COLOR_BGR2RGB)
-            io_prob_1 = cv2.cvtColor(io_prob_1, cv2.COLOR_BGR2RGB)
-            io_prob_2 = cv2.cvtColor(io_prob_2, cv2.COLOR_BGR2RGB)
-
-            den_prob_map_1.append(den_prob_1)
-            den_prob_map_2.append(den_prob_2)
-            io_prob_map_1.append(io_prob_1)
-            io_prob_map_2.append(io_prob_2)
-
-
-
-       
-        # ratio = UNIT_H/tensor[2].shape[0]
+        den0_map = cv2.GaussianBlur(den0, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
         den0_map = cv2.resize(cv2.applyColorMap((255 * tensor[2] / (tensor[2].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+        den1_map = cv2.GaussianBlur(den1, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
         den1_map = cv2.resize(cv2.applyColorMap((255 * tensor[3] / (tensor[3].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
+
+        ########## mask ###############
+        mask_out = mask[0,:,:,:].detach().cpu().numpy()
+        mask_in=  mask[cfg.TRAIN_BATCH_SIZE,:,:,:].detach().cpu().numpy()
+        gt_mask_out= gt_mask[0,0:1,:,:].detach().cpu().numpy()
+        gt_mask_in = gt_mask[0,1:2,:,:].detach().cpu().numpy()
+
+        mask_out = cv2.GaussianBlur(mask_out, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        mask_in = cv2.GaussianBlur(mask_in, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        gt_mask_out = cv2.GaussianBlur(gt_mask_out, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        gt_mask_in = cv2.GaussianBlur(gt_mask_in, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        gt_mask_out[gt_mask_out>0.15] = 1
+        gt_mask_in[gt_mask_in>0.15] = 1
+
+        mask_out = cv2.resize(cv2.applyColorMap((255 * mask_out / (mask_out.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_HOT), (UNIT_W, UNIT_H)) 
+        mask_in = cv2.resize(cv2.applyColorMap((255 * mask_in / (mask_in.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_HOT), (UNIT_W, UNIT_H)) 
+        gt_mask_out = cv2.resize(cv2.applyColorMap((255 * gt_mask_out / (gt_mask_out.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_HOT), (UNIT_W, UNIT_H)) 
+        gt_mask_in = cv2.resize(cv2.applyColorMap((255 * gt_mask_in / (gt_mask_in.max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_HOT), (UNIT_W, UNIT_H)) 
+        
+        ########## io density map ###############
 
         out_map = cv2.resize(cv2.applyColorMap((255 * tensor[4] / (tensor[4].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
         in_map = cv2.resize(cv2.applyColorMap((255 * tensor[5] / (tensor[5].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
@@ -293,89 +243,48 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         gt_out_map = cv2.resize(cv2.applyColorMap((255 * tensor[6][0] / (tensor[6][0].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
         gt_in_map = cv2.resize(cv2.applyColorMap((255 * tensor[6][1] / (tensor[6][1].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
         
-        conf_map0 = np.argmax(tensor[7], axis=0)
-        conf_map0 = cv2.resize(COLOR_MAP_CONF[conf_map0].squeeze(),  (UNIT_W, UNIT_H))
+        ########## argmax attention map ###############
 
-        conf_map0_dot = conf_map0 * np.repeat(((gt_den_scales[0][0].detach().cpu().numpy())>0).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
+        attn_map0 = np.argmax(tensor[7], axis=0)
+        attn_map0 = cv2.resize(COLOR_MAP_ATTN[attn_map0].squeeze(),  (UNIT_W, UNIT_H))
+        attn_map0_dot = 255 - attn_map0 * np.repeat(((gt_den_scales[0][0].detach().cpu().numpy())>0.05).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
         
-        conf_map1 = np.argmax(tensor[8], axis=0)
-        conf_map1 = cv2.resize(COLOR_MAP_CONF[conf_map1].squeeze(),  (UNIT_W, UNIT_H))
-        conf_map1_dot = conf_map1 * np.repeat((((gt_den_scales[0][1].detach().cpu().numpy())>0)).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
-        
-        conf_0_scale_0 = cv2.resize(cv2.applyColorMap((255 * tensor[7][0] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        conf_0_scale_1 = cv2.resize(cv2.applyColorMap((255 * tensor[7][1] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        conf_0_scale_2 = cv2.resize(cv2.applyColorMap((255 * tensor[7][2] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        
-        conf_1_scale_0 = cv2.resize(cv2.applyColorMap((255 * tensor[8][0] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        conf_1_scale_1 = cv2.resize(cv2.applyColorMap((255 * tensor[8][1] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        conf_1_scale_2 = cv2.resize(cv2.applyColorMap((255 * tensor[8][2] ).astype(np.uint8), cv2.COLORMAP_JET), (UNIT_W, UNIT_H))
-        
-        
-        
+        attn_map1 = np.argmax(tensor[8], axis=0)
+        attn_map1 = cv2.resize(COLOR_MAP_ATTN[attn_map1].squeeze(),  (UNIT_W, UNIT_H))
+        attn_map1_dot = 255 - attn_map1 * np.repeat((((gt_den_scales[0][1].detach().cpu().numpy())>0.05)).squeeze(),3,axis=1).reshape(UNIT_H, UNIT_W, 3)
    
-        
+
+        ########## mean offset map ###############
+
+        f_flow_map_m = np.mean(f_flow_map,axis=0)
+        b_flow_map_m = np.mean(b_flow_map,axis=0)
+
+
         pil_input0 = np.array(pil_input0)
         pil_input1 = np.array(pil_input1)
 
 
-        # for i in range(3):
-        for i in range(len(f_flow_map)):
-
-
-            f_flow_map[i] = Image.fromarray(f_flow_map[i])
-            b_flow_map[i] = Image.fromarray(b_flow_map[i])
-
-        for i in range(len(attn_1)):
-
-            feature_1_map[i] = Image.fromarray(feature_1_map[i])
-            align_feature_2_map[i] = Image.fromarray(align_feature_2_map[i])
-            feature_2_map[i] = Image.fromarray(feature_2_map[i])
-            align_feature_1_map[i] = Image.fromarray(align_feature_1_map[i])
-        for i in range(len(den_scales_1_map)):
-            den_scales_1_map[i]= Image.fromarray(den_scales_1_map[i])
-            gt_den_scales_1_map[i]= Image.fromarray(gt_den_scales_1_map[i])
-            den_scales_2_map[i]= Image.fromarray(den_scales_2_map[i])
-            gt_den_scales_2_map[i]= Image.fromarray(gt_den_scales_2_map[i])
-            
-            mask_out_scales_1_map[i]= Image.fromarray(mask_out_scales_1_map[i])
-            mask_in_scales_1_map[i]= Image.fromarray(mask_in_scales_1_map[i])
-            gt_mask_out_scales_1_map[i]= Image.fromarray(gt_mask_out_scales_1_map[i])
-            gt_mask_in_scales_1_map[i]= Image.fromarray(gt_mask_in_scales_1_map[i])
-
-            den_prob_map_1[i] = Image.fromarray(den_prob_map_1[i])
-            den_prob_map_2[i] = Image.fromarray(den_prob_map_2[i])
-            io_prob_map_1[i] = Image.fromarray(io_prob_map_1[i])
-            io_prob_map_2[i] = Image.fromarray(io_prob_map_2[i])
-
-
-
-
-        # for i, box in enumerate(boxes, 0):
-        #     wh_LeftTop = (box[0], box[1])
-        #     wh_RightBottom = (box[2], box[3])
-        #     cv2.rectangle(binar_color_map, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-        #     cv2.rectangle(pil_input, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-
+      
         pil_input0 = Image.fromarray(pil_input0)
         pil_input1 = Image.fromarray(pil_input1)
         den0_map = Image.fromarray(cv2.cvtColor(den0_map, cv2.COLOR_BGR2RGB))
         den1_map = Image.fromarray(cv2.cvtColor(den1_map, cv2.COLOR_BGR2RGB))
+        mask_out = Image.fromarray(cv2.cvtColor(mask_out, cv2.COLOR_BGR2RGB))
+        mask_in = Image.fromarray(cv2.cvtColor(mask_in, cv2.COLOR_BGR2RGB))
+        gt_mask_out = Image.fromarray(cv2.cvtColor(gt_mask_out, cv2.COLOR_BGR2RGB))
+        gt_mask_in = Image.fromarray(cv2.cvtColor(gt_mask_in, cv2.COLOR_BGR2RGB))
         out_map = Image.fromarray(cv2.cvtColor(out_map, cv2.COLOR_BGR2RGB))
         in_map = Image.fromarray(cv2.cvtColor(in_map, cv2.COLOR_BGR2RGB))
         gt_out_map = Image.fromarray(cv2.cvtColor(gt_out_map, cv2.COLOR_BGR2RGB))
         gt_in_map = Image.fromarray(cv2.cvtColor(gt_in_map, cv2.COLOR_BGR2RGB))
-        conf_map0 = Image.fromarray(cv2.cvtColor(conf_map0, cv2.COLOR_BGR2RGB))
-        conf_map1 = Image.fromarray(cv2.cvtColor(conf_map1, cv2.COLOR_BGR2RGB))
-        conf_map0_dot = Image.fromarray(cv2.cvtColor(conf_map0_dot, cv2.COLOR_BGR2RGB))
-        conf_map1_dot = Image.fromarray(cv2.cvtColor(conf_map1_dot, cv2.COLOR_BGR2RGB))
+        attn_map0 = Image.fromarray(cv2.cvtColor(attn_map0, cv2.COLOR_BGR2RGB))
+        attn_map1 = Image.fromarray(cv2.cvtColor(attn_map1, cv2.COLOR_BGR2RGB))
+        attn_map0_dot = Image.fromarray(cv2.cvtColor(attn_map0_dot, cv2.COLOR_BGR2RGB))
+        attn_map1_dot = Image.fromarray(cv2.cvtColor(attn_map1_dot, cv2.COLOR_BGR2RGB))
+        f_flow_map_m = Image.fromarray(np.uint8(f_flow_map_m))
+        b_flow_map_m = Image.fromarray(np.uint8(b_flow_map_m))
         
-        conf_0_scale_0 = Image.fromarray(cv2.cvtColor(conf_0_scale_0, cv2.COLOR_BGR2RGB))
-        conf_0_scale_1 = Image.fromarray(cv2.cvtColor(conf_0_scale_1, cv2.COLOR_BGR2RGB))
-        conf_0_scale_2 = Image.fromarray(cv2.cvtColor(conf_0_scale_2, cv2.COLOR_BGR2RGB))
-        
-        conf_1_scale_0 = Image.fromarray(cv2.cvtColor(conf_1_scale_0, cv2.COLOR_BGR2RGB))
-        conf_1_scale_1 = Image.fromarray(cv2.cvtColor(conf_1_scale_1, cv2.COLOR_BGR2RGB))
-        conf_1_scale_2 = Image.fromarray(cv2.cvtColor(conf_1_scale_2, cv2.COLOR_BGR2RGB))
+       
         
 
 
@@ -386,36 +295,23 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
 
         imgs = [pil_input0, out_map, gt_out_map,\
-                den0_map, conf_map0, conf_map0_dot,\
-#                 den_prob_map_1[2],den_prob_map_1[1],den_prob_map_1[0],\
-                conf_0_scale_2,conf_0_scale_1,conf_0_scale_0,
-                io_prob_map_1[2],io_prob_map_1[1],io_prob_map_1[0],\
-                
+                f_flow_map_m, mask_out, gt_mask_out,\
+                den0_map, attn_map0, attn_map0_dot,\
+                attn_map_scale_1[2],attn_map_scale_1[1],attn_map_scale_1[0],
                 f_flow_map[2], f_flow_map[1], f_flow_map[0], \
-                feature_1_map[2], feature_1_map[1], feature_1_map[0],\
-                align_feature_2_map[2], align_feature_2_map[1], align_feature_2_map[0],\
                 den_scales_1_map[2],den_scales_1_map[1],den_scales_1_map[0],\
                 gt_den_scales_1_map[2],gt_den_scales_1_map[1],gt_den_scales_1_map[0],\
-                mask_out_scales_1_map[2],mask_out_scales_1_map[1],mask_out_scales_1_map[0],\
-                gt_mask_out_scales_1_map[2],gt_mask_out_scales_1_map[1],gt_mask_out_scales_1_map[0],\
-                
-                
-                
+               
                 pil_input1, in_map, gt_in_map,\
-                den1_map, conf_map1, conf_map1_dot,\
-#                 den_prob_map_2[2],den_prob_map_2[1],den_prob_map_2[0],\
-                conf_1_scale_2,conf_1_scale_1,conf_1_scale_0,
-                io_prob_map_2[2],io_prob_map_2[1],io_prob_map_2[0],\
+                b_flow_map_m, mask_in, gt_mask_in,\
+                den1_map, attn_map1, attn_map1_dot,\
+                attn_map_scale_2[2],attn_map_scale_2[1],attn_map_scale_2[0],
                 b_flow_map[2], b_flow_map[1], b_flow_map[0], \
-                feature_2_map[2], feature_2_map[1], feature_2_map[0], \
-                align_feature_1_map[2], align_feature_1_map[1], align_feature_1_map[0], \
                 den_scales_2_map[2],den_scales_2_map[1],den_scales_2_map[0],\
-                gt_den_scales_2_map[2],gt_den_scales_2_map[1],gt_den_scales_2_map[0],\
-                mask_in_scales_1_map[2],mask_in_scales_1_map[1],mask_in_scales_1_map[0],\
-                gt_mask_in_scales_1_map[2],gt_mask_in_scales_1_map[1],gt_mask_in_scales_1_map[0]]
+                gt_den_scales_2_map[2],gt_den_scales_2_map[1],gt_den_scales_2_map[0]]
 
 
-        w_num , h_num = 3, 22
+        w_num , h_num = 3, 16
 
         
 
@@ -442,152 +338,8 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         target.resize((w_num*50, h_num*50))
         target.save(os.path.join(dir,f'{iter}_{batch}_den.jpg'.format()))
 
-        # target.save(os.path.join(exp_path,'onlymean_offset','{}_den.jpg'.format(iter)))
 
 
-
-        
-
-    
-
-
-# -
-
-# def vis_results_more(exp_name, epoch, writer, restore, img, pred_map, gt_map, binar_map,threshold_matrix, pred_boxes, gt_boxes):
-
-#     pil_to_tensor = standard_transforms.ToTensor()
-
-#     x = []
-#     y = []
-
-#     for idx, tensor in enumerate(zip(img.cpu().data, pred_map, gt_map, binar_map, threshold_matrix)):
-#         if idx > 1:  # show only one group
-#             break
-
-#         pil_input = restore(tensor[0])
-#         pred_color_map = cv2.applyColorMap((255 * tensor[1] / (tensor[2].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-#         gt_color_map = cv2.applyColorMap((255 * tensor[2] / (tensor[2].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-#         binar_color_map = cv2.applyColorMap((255 * tensor[3] ).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-#         threshold_color_map = cv2.applyColorMap((255 * tensor[4] / (tensor[2].max()  + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-
-#         point_color = (0, 255, 0)  # BGR
-#         thickness = 1
-#         lineType = 4
-#         pil_input = np.array(pil_input)
-
-#         for i, box in enumerate(pred_boxes, 0):
-#             wh_LeftTop = (box[0], box[1])
-#             wh_RightBottom = (box[2], box[3])
-#             # print(wh_LeftTop, wh_RightBottom)
-#             cv2.rectangle(binar_color_map, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-#             cv2.rectangle(pil_input, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-#         point_color = (255, 0, 0)  # BGR
-
-#         for i, box in enumerate(gt_boxes, 0):
-#             wh_LeftTop = (box[0], box[1])
-#             wh_RightBottom = (box[2], box[3])
-#             cv2.rectangle(pil_input, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-
-#         pil_input = Image.fromarray(pil_input)
-#         pil_label = Image.fromarray(cv2.cvtColor(gt_color_map, cv2.COLOR_BGR2RGB))
-#         pil_output = Image.fromarray(cv2.cvtColor(pred_color_map, cv2.COLOR_BGR2RGB))
-#         pil_binar = Image.fromarray(cv2.cvtColor(binar_color_map, cv2.COLOR_BGR2RGB))
-
-#         pil_threshold = Image.fromarray(cv2.cvtColor(threshold_color_map, cv2.COLOR_BGR2RGB))
-
-
-#         x.extend([pil_to_tensor(pil_input.convert('RGB')), pil_to_tensor(pil_label.convert('RGB')),
-#                   pil_to_tensor(pil_output.convert('RGB')), pil_to_tensor(pil_binar.convert('RGB')),
-#                   pil_to_tensor(pil_threshold.convert('RGB'))])
-
-#     x = torch.stack(x, 0)
-#     x = vutils.make_grid(x, nrow=3, padding=5)
-#     x = (x.numpy() * 255).astype(np.uint8)
-
-#     writer.add_image(exp_name + '_epoch_' + str(epoch + 1), x)
-
-# def vis_results(exp_name, epoch, writer, restore, img, pred_map, gt_map,binar_map,boxes):#, flow):
-
-#     pil_to_tensor = standard_transforms.ToTensor()
-
-#     x = []
-#     y = []
-
-#     for idx, tensor in enumerate(zip(img.cpu().data, pred_map, gt_map,binar_map)):
-#         if idx>1:# show only one group
-#             break
-
-#         pil_input = restore(tensor[0])
-#         pred_color_map = cv2.applyColorMap((255*tensor[1]/(tensor[2].max()+1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-#         gt_color_map = cv2.applyColorMap((255*tensor[2]/(tensor[2].max()+1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-#         binar_color_map = cv2.applyColorMap((255*tensor[3]/(tensor[2].max()+1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET)
-
-#         point_color = (0, 255, 0)  # BGR
-#         thickness = 1
-#         lineType = 4
-#         pil_input = np.array(pil_input)
-#         # print(pil_input, binar_color_map)
-#         for i, box in enumerate(boxes, 0):
-#             wh_LeftTop = (box[0], box[1])
-#             wh_RightBottom = (box[0] + box[2], box[1] + box[3])
-#             # print(wh_LeftTop, wh_RightBottom)
-#             cv2.rectangle(binar_color_map, wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-#             cv2.rectangle(pil_input,       wh_LeftTop, wh_RightBottom, point_color, thickness, lineType)
-
-#         pil_input =Image.fromarray(pil_input)
-#         pil_label = Image.fromarray(cv2.cvtColor(gt_color_map,cv2.COLOR_BGR2RGB))
-#         pil_output = Image.fromarray(cv2.cvtColor(pred_color_map,cv2.COLOR_BGR2RGB))
-#         pil_binar = Image.fromarray(cv2.cvtColor(binar_color_map, cv2.COLOR_BGR2RGB))
-#         x.extend([pil_to_tensor(pil_input.convert('RGB')), pil_to_tensor(pil_label.convert('RGB')),
-#                   pil_to_tensor(pil_output.convert('RGB')),pil_to_tensor(pil_binar.convert('RGB'))])
-#         # pdb.set_trace()  sum(sum(flow[0].cpu().data.numpy().transpose((1,2,0))[:,:,0]))
-#         # flow = flow[0].cpu().data.numpy().transpose((1,2,0))
-#         # flow0 = cv2.applyColorMap((255*flow[:,:,0]/(flow[:,:,0].max()+1e-10)).astype(np.uint8).squeeze(),cv2.COLORMAP_JET)
-#         # flow1 = cv2.applyColorMap((255*flow[:,:,1]/(flow[:,:,1].max()+1e-10)).astype(np.uint8).squeeze(),cv2.COLORMAP_JET)
-#         # flow2 = cv2.applyColorMap((255*flow[:,:,2]/(flow[:,:,2].max()+1e-10)).astype(np.uint8).squeeze(),cv2.COLORMAP_JET)
-#         # flow0 = Image.fromarray(cv2.cvtColor(flow0,cv2.COLOR_BGR2RGB))
-#         # flow1 = Image.fromarray(cv2.cvtColor(flow1,cv2.COLOR_BGR2RGB))
-#         # flow2 = Image.fromarray(cv2.cvtColor(flow2,cv2.COLOR_BGR2RGB))
-#         # y.extend([pil_to_tensor(flow0.convert('RGB')), pil_to_tensor(flow1.convert('RGB')), pil_to_tensor(flow2.convert('RGB'))])
-
-
-#     x = torch.stack(x, 0)
-#     x = vutils.make_grid(x, nrow=4, padding=5)
-#     x = (x.numpy()*255).astype(np.uint8)
-
-#     # y = torch.stack(y,0)
-#     # y = vutils.make_grid(y,nrow=3,padding=5)
-#     # y = (y.numpy()*255).astype(np.uint8)
-
-#     # x = np.concatenate((x,y),axis=1)
-#     writer.add_image(exp_name + '_epoch_' + str(epoch+1), x)
-
-
-# def print_NWPU_summary(trainer, scores):
-#     f1m_l, ap_l, ar_l, mae, mse, nae, loss = scores
-#     train_record = trainer.train_record
-#     with open(trainer.log_txt, 'a') as f:
-#         f.write('='*15 + '+'*15 + '='*15 + '\n')
-#         f.write(str(trainer.epoch) + '\n\n')
-
-#         f.write('  [F1 %.4f Pre %.4f Rec %.4f ] [mae %.4f mse %.4f nae %.4f] [val loss %.4f]\n\n' % (f1m_l, ap_l, ar_l,mae, mse, nae,loss))
-
-#         f.write('='*15 + '+'*15 + '='*15 + '\n\n')
-
-#     print( '='*50 )
-#     print( trainer.exp_name )
-#     print( '    '+ '-'*20 )
-#     print( '  [F1 %.4f Pre %.4f Rec %.4f] [mae %.2f mse %.2f], [val loss %.4f]'\
-#             % (f1m_l, ap_l, ar_l, mae, mse, loss) )
-#     print( '    '+ '-'*20 )
-#     print( '[best] [model: %s] , [F1 %.4f Pre %.4f Rec %.4f] [mae %.2f], [mse %.2f], [nae %.4f]' % (train_record['best_model_name'], \
-#                                                         train_record['best_F1'], \
-#                                                         train_record['best_Pre'], \
-#                                                         train_record['best_Rec'],\
-#                                                         train_record['best_mae'],\
-#                                                         train_record['best_mse'],\
-#                                                         train_record['best_nae']) )
-#     print( '='*50 )  
 
 def print_NWPU_summary_det(trainer, scores):
     train_record = trainer.train_record
