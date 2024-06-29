@@ -1,20 +1,14 @@
 import datasets
-# from  config import cfg
 import numpy as np
 import torch
 import datasets
 from misc.utils import *
-# from model.VIC import Video_Individual_Counter
-# from model.video_crowd_count import video_crowd_count
 from model.video_crowd_flux import SOFANet
 
 from tqdm import tqdm
 import torch.nn.functional as F
-from pathlib import Path
 import argparse
-import matplotlib.cm as cm
 from train import compute_metrics_single_scene,compute_metrics_all_scenes
-import  os.path as osp
 
 
 parser = argparse.ArgumentParser(

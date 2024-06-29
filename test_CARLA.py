@@ -1,25 +1,18 @@
 import datasets
-# from  config import cfg
 import numpy as np
 import torch
 import datasets
 from misc.utils import *
-# from model.VIC import Video_Individual_Counter
-# from model.video_crowd_count import video_crowd_count
 from model.video_crowd_flux import SOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
 import torch.nn.functional as F
-from pathlib import Path
 import argparse
-import matplotlib.cm as cm
 from train import compute_metrics_single_scene,compute_metrics_all_scenes
-import  os.path as osp
 from misc.gt_generate import *
 
 
-# from model.MatchTool.compute_metric import associate_pred2gt_point_vis
 
 parser = argparse.ArgumentParser(
     description='VIC test and demo',

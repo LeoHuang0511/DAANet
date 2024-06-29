@@ -1,11 +1,8 @@
 import datasets
-# from  config import cfg
 import numpy as np
 import torch
 import datasets
 from misc.utils import *
-# from model.VIC import Video_Individual_Counter
-# from model.video_crowd_count import video_crowd_count
 from model.video_crowd_flux import SOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 

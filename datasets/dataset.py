@@ -58,23 +58,14 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
 
-#         img_rgb = Image.open(self.imgs_path[index].replace('_resize.h5','.jpg'))
-        # img = cv2.imread(self.imgs_path[index].replace('_resize.h5','.jpg'))
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-
-        # img = read_LAB_image(self.imgs_path[index])
         img = Image.open(self.imgs_path[index])
         if img.mode != 'RGB':
             img=img.convert('RGB')
-#         if img.mode != 'RGB':
-#             img=img.convert('RGB')
-
         target = self.labels[index].copy()
 
         if self.main_transforms != None:
             img, target = self.main_transforms(img, target)
-        # img_rgb = cv2.cvtColor(np.array(img.copy()), cv2.COLOR_LAB2RGB)
-        # img_rgb = torch.from_numpy(img_rgb).float().permute(2,0,1)
+
         if self.img_transforms != None:
             img = self.img_transforms(img)
 
@@ -126,9 +117,6 @@ class TestDataset(data.Dataset):
         
 
 
-        # img1 = read_LAB_image(self.imgs_path[index1])
-        # img2 = read_LAB_image(self.imgs_path[index2])
-        # img3 = read_LAB_image(self.imgs_path[index3])
         img1 = Image.open(self.imgs_path[index1])
         img2 = Image.open(self.imgs_path[index2])
 
@@ -217,9 +205,6 @@ class ShiftPretrainDataset(data.Dataset):
 
     def __getitem__(self, index):
 
-#         img_rgb = Image.open(self.imgs_path[index].replace('_resize.h5','.jpg'))
-        # img = cv2.imread(self.imgs_path[index].replace('_resize.h5','.jpg'))
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
         result = np.random.choice(self.index_sequence, size=3, replace=False)
 
