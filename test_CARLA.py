@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from model.video_people_flux import DutyMOFANet
+from model.video_crowd_flux import SOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
@@ -34,7 +34,7 @@ parser.add_argument(
     '--OUTPUT_DIR', type=str, default='./test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--TEST_INTERVALS', type=int, default=60,
+    '--TEST_INTERVALS', type=int, default=62,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SAVE_FREQ', type=int, default=20,
@@ -87,7 +87,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
-        net = DutyMOFANet(cfg, cfg_data)
+        net = SOFANet(cfg, cfg_data)
 
 
         test_loader, restore_transform = datasets.loading_testset(cfg, mode='test')
@@ -157,7 +157,7 @@ def test(cfg, cfg_data):
 
                 else:
 
-                    den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                    den_scales, pred_map, _, out_den, in_den, _, _, _, _, _ = net(img)
 
                     pre_inflow, pre_outflow = \
                         in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
@@ -221,15 +221,15 @@ def test(cfg, cfg_data):
                     print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.cpu().numpy(),2)}')
 
                     img_pair_idx+=1
-                    if img_pair_idx % cfg.SAVE_FREQ == 0:
+                    # if img_pair_idx % cfg.SAVE_FREQ == 0:
 
 
-                        save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
-                                img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                                pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
-                                (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, \
-                                [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+                    #     save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
+                    #             img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                    #             pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
+                    #             (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                    #             f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, \
+                    #             [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
             scenes_pred_dict.append(pred_dict)
             scenes_gt_dict.append(gt_dict)
 

@@ -4,7 +4,7 @@ import torch
 from torch import optim
 import datasets
 from misc.utils import *
-from model.video_people_flux import DutyMOFANet
+from model.video_crowd_flux import SOFANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -42,14 +42,14 @@ class Trainer():
         else:
             self.resume = False
 
-        self.net = DutyMOFANet(cfg, cfg_data).cuda()
+        self.net = SOFANet(cfg, cfg_data).cuda()
 
 
         params = [
             {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.deformable_alignment.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
             {"params": self.net.mask_predict_layer.parameters(), "lr": cfg.LR_THRE, 'weight_decay': cfg.WEIGHT_DECAY},
-            {"params": self.net.confidence_predict_layer.parameters(), "lr": cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
+            {"params": self.net.ASAM.parameters(), "lr": cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
             
         ]
         
@@ -64,6 +64,7 @@ class Trainer():
         
         
         if self.cfg.RESUME_PATH != '':
+            gpu_id = self.cfg.GPU_ID
             self.optimizer = optim.Adam(params)
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
             self.net.load_state_dict(latest_state['net'], strict=True)
@@ -74,6 +75,7 @@ class Trainer():
             self.exp_path = latest_state['exp_path']
             self.exp_name = latest_state['exp_name']
             self.cfg = latest_state['cfg']
+            self.cfg.GPU_ID = gpu_id
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -121,7 +123,7 @@ class Trainer():
             img,target = data
             img = torch.stack(img,0).cuda()
             img_pair_num = img.size(0)//2  
-            den_scales, final_den, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = self.net(img)
+            den_scales, final_den, mask, out_den, in_den, attns, f_flow, b_flow, feature1, feature2 = self.net(img)
             
 
             pre_inf_cnt, pre_out_cnt = in_den.sum(), out_den.sum()
@@ -171,7 +173,7 @@ class Trainer():
         
             gt_mask = (gt_io_map>0).float()
  
-            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt,confidence)
+            kpi_loss = self.compute_kpi_loss(final_den, den_scales, gt_den_scales, mask, gt_mask,  out_den, in_den, gt_io_map, pre_inf_cnt, pre_out_cnt, gt_inflow_cnt, gt_outflow_cnt,attns)
             all_loss = (kpi_loss + con_loss * cfg.CON_WEIGHT ).sum()
 
 
@@ -226,9 +228,9 @@ class Trainer():
                 save_results_mask(self.cfg, self.exp_path, self.exp_name, None, self.i_tb, self.restore_transform, 0, 
                                     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
                                     final_den[0].detach().cpu().numpy(), final_den[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(), gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
-                                    (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                                    f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
-                                    [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+                                    (attns[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(attns[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                    f_flow , b_flow,  den_scales, gt_den_scales, 
+                                    mask, gt_mask)
 
 
 
@@ -465,7 +467,7 @@ if __name__=='__main__':
 
     parser.add_argument('--GPU_ID', type=str, default='0')
     parser.add_argument('--SEED', type=int, default=3035)
-    parser.add_argument('--DATASET', type=str, default='HT21')
+    parser.add_argument('--DATASET', type=str, default='SENSE')
     parser.add_argument('--PRINT_FREQ', type=int, default=20)
     parser.add_argument('--SAVE_VIS_FREQ', type=int, default=500)
     parser.add_argument('--BACKBONE', type=str, default='vgg')

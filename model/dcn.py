@@ -136,11 +136,11 @@ class MultiColumnOffsetConv(nn.Module):
         return x3
         
 def offset_visualization(offset, feature_scale):
-    offset_y = offset[:,0::2,:,:] #vertical
-    offset_x = offset[:,1::2,:,:] #horizontal
-    offset_y_mean = torch.mean(offset_x,dim = 1, keepdims = True)
-    offset_x_mean = torch.mean(offset_y,dim = 1, keepdims = True)
+    # offset_y = offset[:,0::2,:,:] #vertical
+    # offset_x = offset[:,1::2,:,:] #horizontal
+    # offset_y_mean = torch.mean(offset_x,dim = 1, keepdims = True)
+    # offset_x_mean = torch.mean(offset_y,dim = 1, keepdims = True)
 
-    offset = torch.concat([offset_x_mean,offset_y_mean],axis = 1)
-    offset = F.interpolate(offset,scale_factor=feature_scale,mode='bilinear',align_corners=True) * feature_scale
+    # offset = torch.concat([offset_x_mean,offset_y_mean],axis = 1)
+    offset = F.interpolate(offset,scale_factor=feature_scale,mode='bilinear',align_corners=True) * (feature_scale)
     return offset

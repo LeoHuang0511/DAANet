@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from model.video_people_flux import DutyMOFANet
+from model.video_crowd_flux import SOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
@@ -87,7 +87,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
 
     with torch.no_grad():
-        net = DutyMOFANet(cfg, cfg_data)
+        net = SOFANet(cfg, cfg_data)
         with open(osp.join(cfg_data.DATA_PATH, 'scene_label.txt'), 'r') as f:
             lines = f.readlines()
         scene_label = {}
@@ -161,7 +161,7 @@ def test(cfg, cfg_data):
 
                 if frame_signal == 'match' or not cfg.SKIP_FLAG:
 
-                    den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                    den_scales, pred_map, _, out_den, in_den, _, _, _, _, _ = net(img)
 
                     pre_inflow, pre_outflow = \
                         in_den.sum().detach().cpu(), out_den.sum().detach().cpu()
@@ -258,7 +258,10 @@ def test(cfg, cfg_data):
 
         log_file = os.path.join(dir, 'log.txt')
         with open(log_file, 'a') as f:
-            f.write(f'iter: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+            try:
+                f.write(f'iter: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+            except:
+                f.write('iter: N/A')
             f.write(f'model_path: {cfg.MODEL_PATH}\n\n')
             f.write(f'test_intervals: {cfg.TEST_INTERVALS}\n\n')
 

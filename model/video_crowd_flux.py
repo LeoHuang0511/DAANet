@@ -12,10 +12,10 @@ BN_MOMENTUM = 0.01
 
 
 # +
-class DutyMOFANet(nn.Module):
+class SOFANet(nn.Module):
 
     def __init__(self, cfg, cfg_data):
-        super(DutyMOFANet, self).__init__()
+        super(SOFANet, self).__init__()
         self.cfg = cfg
 
         self.Extractor = backbone_FPN(cfg)
@@ -27,10 +27,8 @@ class DutyMOFANet(nn.Module):
         self.mask_predict_layer = nn.Sequential(
 
             nn.Dropout2d(0.2),
-
             ResBlock(in_dim=128, out_dim=64, dilation=0, norm="bn"),
             ResBlock(in_dim=64, out_dim=32, dilation=0, norm="bn"),
-
 
             nn.ConvTranspose2d(32, 16, 2, stride=2, padding=0, output_padding=0, bias=False),
             nn.BatchNorm2d(16, momentum=BN_MOMENTUM),
@@ -45,32 +43,39 @@ class DutyMOFANet(nn.Module):
             )
 
 
-        self.confidence_predict_layer = nn.Sequential(
-            #nn.Dropout2d(0.2),
+        self.ASAM = nn.Sequential(
 
 
             nn.Conv2d(384, 64, kernel_size=1, stride=1, padding=0),
-
             nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
             nn.ReLU(inplace=True),
             
             nn.Conv2d(64, 32, kernel_size=1, stride=1, padding=0),
-
             nn.BatchNorm2d(32, momentum=BN_MOMENTUM),
             nn.ReLU(inplace=True),
 
-            nn.Conv2d(32, 3, kernel_size=1, stride=1, padding=0),
-            
-            
-            
+            nn.Conv2d(32, 3, kernel_size=1, stride=1, padding=0),           
         )
-        nn.init.constant_(self.confidence_predict_layer[6].weight, 0.)
-        nn.init.constant_(self.confidence_predict_layer[6].bias, 0.)
+
+        nn.init.constant_(self.ASAM[6].weight, 0.)
+        nn.init.constant_(self.ASAM[6].bias, 0.)
         
 
     
         self.cfg = cfg
 
+
+    def DDA(self, feature, attns):
+        feature1 = []
+        feature2 = []
+        for scale in range(len(feature)):
+            attn = attns[:,scale,:,:].detach().unsqueeze(1)
+            attn = F.adaptive_avg_pool2d(attn, feature[scale].shape[2:])
+            feature[scale] = attn * feature[scale]
+            feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
+            feature2.append(feature[scale][1::2,:,:,:])
+
+        return feature1, feature2
 
 
     def forward(self, img):
@@ -87,44 +92,25 @@ class DutyMOFANet(nn.Module):
             den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
             dens.append(F.interpolate(den_scales[scale], scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale))
 
-
             feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE)) # (b*2, 128, h/conf_block_size, w/conf_block_size)
         
+
         dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
-
-        f_con = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
-        confidences = self.confidence_predict_layer(f_con)
-        confidences = F.upsample_nearest(confidences, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
-        confidences = torch.softmax(confidences,dim=1) # (b*2,3,h,w)
-        
-
         dens = torch.sum(dens, dim=1).unsqueeze(1)
 
 
-
-        feature1 = []
-        feature2 = []
-        for scale in range(len(feature)):
-            
-            conf = confidences[:,scale,:,:].detach().unsqueeze(1)
-
-            conf = F.adaptive_avg_pool2d(conf, feature[scale].shape[2:])
-
-
-    
-            feature[scale] = conf * feature[scale]
-
-           
-
-            feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
-            feature2.append(feature[scale][1::2,:,:,:])
+        f_attn = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
+        attns = self.ASAM(f_attn)
+        attns = F.upsample_nearest(attns, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
+        attns = torch.softmax(attns,dim=1) # (b*2,3,h,w)
         
 
-        f, flow , back_flow, attn_1, attn_2, f1, f2 = self.deformable_alignment(feature1, feature2)
+
+
+        feature1, feature2 = self.DDA(feature, attns)
+        f, f_flow , b_flow, f1, f2 = self.deformable_alignment(feature1, feature2)
+        
         mask = self.mask_predict_layer(f)
-
-
-
         mask = torch.sigmoid(mask)
         
         
@@ -133,7 +119,7 @@ class DutyMOFANet(nn.Module):
 
 
 
-        return  den_scales, dens, mask, out_den, in_den, mask, mask, confidences, flow, back_flow, f1, f2, attn_1, attn_2
+        return  den_scales, dens, mask, out_den, in_den, attns, f_flow, b_flow, f1, f2
 
 
 
@@ -160,6 +146,7 @@ class MOFAlignment(nn.Module):
                                 nn.ReLU(inplace=True),
                                 nn.Conv2d(self.channel_size, self.channel_size, kernel_size=3, stride=1, padding=1)
                                 ))
+            
             self.multi_scale_dcn_alignment.append(
                                 MultiScaleDeformableConv(cfg, self.channel_size, self.channel_size, offset_groups=4, kernel_size=3, mult_column_offset=True, scale=scale)
             )
@@ -215,15 +202,13 @@ class MOFAlignment(nn.Module):
        
         f_out = self.weight_conv(torch.cat([f1, f2_aligned], dim=1))
         f_in = self.weight_conv(torch.cat([f2, f1_aligned], dim=1))
-        attn_1 = [f1, f2_aligned]
-        attn_2 = [f2, f1_aligned]
 
         f_mask = torch.cat([f_out,  f_in],dim=0)
 
 
 
     
-        return f_mask, f_flow, b_flow, attn_1, attn_2, f1, f2
+        return f_mask, f_flow, b_flow, f1, f2
 
 
 

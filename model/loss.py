@@ -74,8 +74,10 @@ class ComputeKPILoss(object):
 
         if self.trainer.i_tb == 1:
             self.init_scale_loss = scale_loss.item()
+        elif self.trainer.resume:
+            self.init_scale_loss = 0.3
         self.dynamic_weight.append((self.init_scale_loss - scale_loss.item())/ (self.init_scale_loss+1e-16))
-        if self.trainer.i_tb > 1000:
+        if self.trainer.i_tb > 1000 and len(self.dynamic_weight) > 1000:
             self.dynamic_weight.pop(0)
             assert len(self.dynamic_weight) == 1000
             

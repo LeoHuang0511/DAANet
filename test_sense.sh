@@ -1,8 +1,0 @@
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 17
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 19
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 21
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 23
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 25
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 27
-python test_SENSE.py --MODEL_PATH /nfs/home/leo0511/Research/DutyMOFA/exp/SENSE/02-21_14-18_vgg__SENSE_5e-05_0.0001/ep_12_iter_182500_mae_2.886_mse_5.129_seq_MAE_5.692_seq_MSE_8.731_WRAE_11.735_MIAE_1.162_MOAE_1.191.pth --GPU_ID 2 --TEST_INTERVALS 29
-

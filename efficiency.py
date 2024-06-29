@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from model.video_people_flux import DutyMOFANet
+from DutyMOFA.src.model.video_crowd_flux import DutyMOFANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
@@ -19,6 +19,8 @@ import  os.path as osp
 from misc.gt_generate import *
 import time
 from thop import profile
+from  torchvision import models
+
 
 
 parser = argparse.ArgumentParser(
@@ -46,7 +48,7 @@ parser.add_argument(
     '--SEED', type=int, default=3035,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--GPU_ID', type=str, default='0',
+    '--GPU_ID', type=str, default='6',
     help='Directory where to write output frames (If None, no output)')
 
 parser.add_argument('--VAL_BATCH_SIZE', type=int, default=1)
@@ -83,7 +85,10 @@ opt.MODE = 'test'
 def test(cfg, cfg_data):
 
     with torch.no_grad():
-        net = DutyMOFANet(cfg, cfg_data).cuda()
+        # net = DutyMOFANet(cfg, cfg_data).Extractor.cuda()
+        vgg = models.vgg16_bn(weights='VGG16_BN_Weights.IMAGENET1K_V1')
+        features = list(vgg.features.children())
+        net = nn.Sequential(*features[0:43]).cuda()
 
         img = torch.rand(2,3,768,1024).cuda()
         total = sum([param.nelement() for param in net.parameters()])

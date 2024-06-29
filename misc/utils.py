@@ -96,7 +96,10 @@ def save_test_logger(cfg, exp_path,cnt_result, final_result):
     log_file = os.path.join(dir, 'log.txt')
 
     with open(log_file, 'a') as f:
-        f.write(f'ep: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+        try:
+            f.write(f'ep: {os.path.basename(cfg.MODEL_PATH).split("_")[1]}    iter: {os.path.basename(cfg.MODEL_PATH).split("_")[3]}\n\n')
+        except:
+            f.write(f'ep: N/A    iter: N/A\n\n')
         f.write(f'model_path: {cfg.MODEL_PATH}  \ntest_interval: {cfg.TEST_INTERVALS}\n\n')
         f.write(f'Prev vs. GT: {cnt_result}\n\n')
         for k in final_result.keys():

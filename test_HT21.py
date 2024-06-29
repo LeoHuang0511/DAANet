@@ -6,7 +6,7 @@ import datasets
 from misc.utils import *
 # from model.VIC import Video_Individual_Counter
 # from model.video_crowd_count import video_crowd_count
-from model.video_people_flux import DutyMOFANet
+from model.video_crowd_flux import SOFANet
 
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -92,7 +92,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
-        net = DutyMOFANet(cfg, cfg_data)
+        net = SOFANet(cfg, cfg_data)
 
         test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
         device = torch.device("cuda:"+str(torch.cuda.current_device()))
@@ -157,7 +157,7 @@ def test(cfg, cfg_data):
 
 
                         # den_scales, masks, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
-                        den_scales, pred_map, mask, out_den, in_den, den_prob, io_prob, confidence, f_flow, b_flow, feature1, feature2, attn_1, attn_2 = net(img)
+                        den_scales, pred_map, _, out_den, in_den, _, _, _, _, _ = net(img)
                         
 
                         pre_inf_cnt, pre_out_cnt = \
@@ -192,12 +192,12 @@ def test(cfg, cfg_data):
                         #         gt_io_map = torch.zeros_like(pred_map).reshape(2,2,pred_map.shape[-2],-1)
                                           
                                 
-                        #         save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
-                        #             img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
-                        #             pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(),  gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
-                        #             (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
-                        #             f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
-                        #             [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
+                                # save_results_mask(cfg, None, None, scene_name, (vi, vi+cfg.TEST_INTERVALS), restore_transform, 0, 
+                                #     img[0].clone().unsqueeze(0), img[1].clone().unsqueeze(0),\
+                                #     pred_map[0].detach().cpu().numpy(), pred_map[1].detach().cpu().numpy(),out_den[0].detach().cpu().numpy(), in_den[0].detach().cpu().numpy(),  gt_io_map[0].unsqueeze(0).detach().cpu().numpy(),\
+                                #     (confidence[0,:,:,:]).unsqueeze(0).detach().cpu().numpy(),(confidence[1,:,:,:]).unsqueeze(0).detach().cpu().numpy(),\
+                                #     f_flow , b_flow, [attn_1,attn_1,attn_1], [attn_2,attn_2,attn_2], den_scales, gt_den_scales, 
+                                #     [mask,mask,mask], [gt_mask,gt_mask,gt_mask], [den_prob,den_prob,den_prob], [io_prob,io_prob,io_prob])
     #                    
     # +
             scenes_pred_dict.append(pred_dict)
