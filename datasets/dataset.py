@@ -4,17 +4,10 @@
 import os.path as osp
 import os
 from collections import defaultdict
-from pathlib import Path
-
-import numpy as np
 import torch
 import torch.utils.data as data
-
-from torchvision.ops.boxes import clip_boxes_to_image
 from PIL import Image
 import re
-import cv2
-from .shift_transform import CutMixShift
 
 
 
@@ -163,85 +156,6 @@ class TestDataset(data.Dataset):
         p = re.compile("\d+")
         return int(p.findall(string)[0])
 
-class ShiftPretrainDataset(data.Dataset):
-    """
-    Dataset class.
-    """
-    def __init__(self, txt_path, base_path, cfg, main_transform=None,img_transform=None,train=True, datasetname='Empty'):
-        self.base_path = base_path
-        self.bboxes = defaultdict(list)
-        self.imgs_path = []
-        self.labels = []
-        self.datasetname = datasetname
-        self.cfg = cfg
-
-        with open(osp.join(base_path, txt_path), 'r') as txt:
-            scene_names = txt.readlines()
-
-        for i in scene_names:
-            
-            if datasetname == "CARLA":
-                img_path, label= CARLA_ImgPath_and_Target(base_path,i.strip())
-            elif datasetname == "HT21":
-                img_path, label= HT21_ImgPath_and_Target(base_path,i.strip())
-            elif datasetname == "SENSE":
-                img_path, label= SENSE_ImgPath_and_Target(base_path,i.strip())
-
-
-            else:
-                raise NotImplementedError
-            self.imgs_path+=img_path
-            self.labels +=label
-
-        self.is_train = train
-        self.main_transforms = main_transform
-        self.img_transforms = img_transform
-        self.cutmix_shift = CutMixShift(self.cfg)
-
-        self.index_sequence = np.arange(len(self.imgs_path))
-
-    def __len__(self):
-        return len(self.imgs_path)
-
-    def __getitem__(self, index):
-
-
-        result = np.random.choice(self.index_sequence, size=3, replace=False)
-
-        
-
-        img1 = Image.open(self.imgs_path[index])
-        img2 = Image.open(self.imgs_path[result[0]])
-        img3 = Image.open(self.imgs_path[result[1]])
-        img4 = Image.open(self.imgs_path[result[2]])
-        if img1.mode != 'RGB':
-            img1=img1.convert('RGB')
-        if img2.mode != 'RGB':
-            img2 = img2.convert('RGB')
-        if img3.mode != 'RGB':
-            img3=img3.convert('RGB')
-        if img4.mode != 'RGB':
-            img4 = img4.convert('RGB')
-
-        target1 = self.labels[index].copy()
-        target2 = self.labels[result[0]].copy()
-        target3 = self.labels[result[1]].copy()
-        target4 = self.labels[result[2]].copy()
-
-        shift_img1, shift_img2, shift_target1, shift_target2 = self.cutmix_shift(img1, img2, img3, img4, target1, target2, target3, target4)
-
-
-
-        if self.main_transforms != None:
-            shift_img1, shift_target1 = self.main_transforms(shift_img1, shift_target1)
-            shift_img2, shift_target2 = self.main_transforms(shift_img2, shift_target2)
-                                                             
-
-        if self.img_transforms != None:
-            shift_img1 = self.img_transforms(shift_img1)
-            shift_img2 = self.img_transforms(shift_img2)
-
-        return  torch.cat([shift_img1[None,:], shift_img2[None,:]],dim=0), [shift_target1, shift_target2]
 
 
 

@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import torch
-import torch.nn.functional as F
-from importlib import import_module
 import misc.transforms as own_transforms
 from  misc.transforms import  check_image
 import torchvision.transforms as standard_transforms
@@ -11,8 +8,6 @@ from . import dataset
 from . import setting
 from . import samplers
 from torch.utils.data import DataLoader
-from torch.utils.data import RandomSampler
-# from config import  cfg
 
 # +
 import random
@@ -25,7 +20,6 @@ class train_pair_transform(object):
         self.crop_left = (0,0)
         self.last_crop_left = (0, 0)
         self.rate_range = cfg_data.CROP_RATE
-        # self.rate_range = (1.0,1.4)
 
         self.resize_and_crop= own_transforms.RandomCrop( cfg_data.TRAIN_SIZE)
         self.scale_to_setting = own_transforms.ScaleByRateWithMin(cfg_data.TRAIN_SIZE[1], cfg_data.TRAIN_SIZE[0])
@@ -139,9 +133,6 @@ def createValTestData(datasetname, Dataset, cfg, cfg_data,mode ='val'):
         lst = cfg_data.TEST_LST
         if datasetname=='HT21':
             target = False
-    elif mode == 'vis':
-        lst = cfg_data.VIS_LST
-
     else:
         lst = cfg_data.VAL_LST
 

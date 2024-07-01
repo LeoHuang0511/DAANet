@@ -15,29 +15,6 @@ import numpy as np
 import  random
 
 
-class ShiftSampler():
-    """The class to generate episodic data"""
-    def __init__(self, labels, n_per):
-        self.n_sample = len(labels)
-        self.n_per= n_per
-        self.n_batch = self.n_sample// n_per
-
-    
-        
-
-    def __len__(self):
-        return self.n_sample 
-    def __iter__(self):
-        for i_batch in range(self.n_batch):
-            batch = []
-            frame_a = torch.randperm(self.n_sample)[:self.n_per]
-            for c in frame_a:
-                
-                batch.append(torch.tensor([c]))
-
-            batch = torch.stack(batch).reshape(-1)
-            yield batch
-
 class CategoriesSampler():
     """The class to generate episodic data"""
     def __init__(self, labels, frame_intervals, n_per):
@@ -79,46 +56,3 @@ class CategoriesSampler():
                 batch.append(torch.tensor([c, pair_c]))
             batch = torch.stack(batch).reshape(-1)
             yield batch
-# -
-
-# class Val_CategoriesSampler():
-#     """The class to generate episodic data"""
-#     def __init__(self, labels, frame_intervals, n_per):
-#         self.frame_intervals = frame_intervals
-
-#         self.n_sample = len(labels)
-#         self.n_batch =   self.n_sample // n_per   #there is no need to evaluate all frames
-#         self.n_per = n_per
-#         self.scenes = []
-#         scene_id = {}
-#         for idx, label in enumerate(labels):
-#             scene_name = label['scene_name']
-#             if scene_name not in scene_id.keys():
-#                 scene_id.update({scene_name:[]})
-#             scene_id[scene_name].append(idx)
-#             self.scenes.append(scene_name)
-
-#     def __len__(self):
-#         return self.n_batch
-#     def __iter__(self):
-#         for i_batch in range(self.n_batch):
-#             batch = []
-#             frame_a = torch.randperm(self.n_sample )[:self.n_per]
-#             for c in frame_a:
-#                 scene_name = self.scenes[c]
-#                 # print(c)
-#                 if c<self.n_sample-self.frame_intervals:
-#                     if self.scenes[c + self.frame_intervals] == scene_name:
-#                         pair_c = c + self.frame_intervals
-#                     else:
-#                         pair_c = c
-#                         c = c- self.frame_intervals
-#                 else:
-#                     pair_c = c
-#                     c = c - self.frame_intervals
-#                 assert self.scenes[c] == self.scenes[pair_c]
-#                 batch.append(torch.tensor([c, pair_c]))
-
-#             batch = torch.stack(batch).t().reshape(-1)
-
-#             yield batch
