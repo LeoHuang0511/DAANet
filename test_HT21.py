@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import datasets
 from misc.utils import *
-from model.video_crowd_flux import SOFANet
+from model.video_crowd_flux import DAANet
 
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -86,7 +86,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
         
     with torch.no_grad():
-        net = SOFANet(cfg, cfg_data)
+        net = DAANet(cfg, cfg_data)
 
         test_loader, restore_transform = datasets.loading_testset(cfg, mode=cfg.MODE)
         device = torch.device("cuda:"+str(torch.cuda.current_device()))

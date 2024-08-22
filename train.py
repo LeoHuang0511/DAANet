@@ -4,7 +4,7 @@ import torch
 from torch import optim
 import datasets
 from misc.utils import *
-from model.video_crowd_flux import SOFANet
+from model.video_crowd_flux import DAANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -42,7 +42,7 @@ class Trainer():
         else:
             self.resume = False
 
-        self.net = SOFANet(cfg, cfg_data).cuda()
+        self.net = DAANet(cfg, cfg_data).cuda()
 
 
         params = [

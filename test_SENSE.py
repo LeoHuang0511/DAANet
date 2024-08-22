@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import datasets
 from misc.utils import *
-from model.video_crowd_flux import SOFANet
+from model.video_crowd_flux import DAANet
 from model.points_from_den import get_ROI_and_MatchInfo
 
 from tqdm import tqdm
@@ -84,7 +84,7 @@ def test(cfg, cfg_data):
     print("model_path: ",cfg.MODEL_PATH)
 
     with torch.no_grad():
-        net = SOFANet(cfg, cfg_data)
+        net = DAANet(cfg, cfg_data)
         with open(osp.join(cfg_data.DATA_PATH, 'scene_label.txt'), 'r') as f:
             lines = f.readlines()
         scene_label = {}
@@ -280,7 +280,7 @@ def test(cfg, cfg_data):
                 f.write(f"DEN_MAE {mae}, DEN_MSE {mse}, MAE {MAE.data}, MSE {MSE.data}, WRAE {WRAE.data}, MIAE {MIAE.data}, MOAE {MOAE.data}\n")
                 if key == 'all':
                     save_cnt_result = cnt_result
-                    np.save(os.path.join(dir + '/SENSE_cnt.py'),save_cnt_result.numpy())
+                    np.save(os.path.join(dir,'SENSE_cnt.py'),save_cnt_result.numpy())
 
                     print('Pre vs GT:', cnt_result)
                     # f.write(f'Pre vs GT: {cnt_result}\n')

@@ -12,10 +12,10 @@ BN_MOMENTUM = 0.01
 
 
 # +
-class SOFANet(nn.Module):
+class DAANet(nn.Module):
 
     def __init__(self, cfg, cfg_data):
-        super(SOFANet, self).__init__()
+        super(DAANet, self).__init__()
         self.cfg = cfg
 
         self.Extractor = backbone_FPN(cfg)
