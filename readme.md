@@ -27,9 +27,11 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 
 # Datasets
 
-* **SenseCrowd**: Download SenseCrowd from [Baidu disk](https://pan.baidu.com/s/1OYBSPxgwvRMrr6UTStq7ZQ?pwd=64xm) or from the original dataset [link](https://github.com/HopLee6/VSCrowd-Dataset). 
+* **SenseCrowd**: 
+    1. Download SenseCrowd from [Baidu disk](https://pan.baidu.com/s/1OYBSPxgwvRMrr6UTStq7ZQ?pwd=64xm).
+    2. Download the original dataset form [here](https://github.com/HopLee6/VSCrowd-Dataset) and the lists of `train/val/test` sets at [link1](https://1drv.ms/u/s!AgKz_E1uf260nWeqa86-o9FMIqMt?e=0scDuw) or [link2](https://pan.baidu.com/s/13X3-egn0fYSd6NUTxB4cuw?pwd=ew8f), and place them to each dataset folder, respectively.  
 * **CroHD**: Download CroHD from [here](https://motchallenge.net/data/Head_Tracking_21/). 
-* **CARLA**: Download CARLA from [here](https://cycuedutw-my.sharepoint.com/:u:/g/personal/s10728241_cycu_edu_tw/EWmIb0S95hBFnb6LHWfs6hoBhxSXGdUBlR1KWqbwxP_v7w?e=q8jULl).
+* **CARLA**: Download CARLA from [here](https://nycu1-my.sharepoint.com/:u:/g/personal/s311505011_ee11_m365_nycu_edu_tw/EamKA5QN4jhGkqsujRc0ZlYB1j7wb3YrjioIuSGOpwVRdg?e=BuNcbT).
 
 # Pretrained Weights
 
