@@ -58,7 +58,6 @@ root
     python train.py --DATASET SENSE --GPU_ID 0
     ```
 * The checkpoints would be saved in ```root/DAANet/exp/```.
-* Replace ```--DATASET``` to ```HT21``` or ```CARLA``` to change the training dataset.
 
 # Testing
 
@@ -66,6 +65,4 @@ root
     ```bash
     python test_SENSE.py --MODEL_PATH ../exp/pretrained/SenseCrowd.pth --GPU_ID 0
     ```
-* Replace ```test_SENSE.py``` to ```test_HT21.py``` or ```test_CARLA.py``` to test the model trained on CroHD or CARLA.
-* Change ```--MODEL_PATH``` to load other pretrained weights.
 
