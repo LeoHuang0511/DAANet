@@ -2,7 +2,6 @@
 
 The official implementation of "Density-assisted Adaptive Alignment Network for Crowd Flux Estimation".
 
-![image](./figures/DAANet-Overall-1.png)
 
 # Installation
 
