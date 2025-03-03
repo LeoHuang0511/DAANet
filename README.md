@@ -45,13 +45,9 @@ root
 │   └──src
 ├──exp
 │   └──pretrained
-│       ├──SensCrowd.pth
-│       ├──CroHD.pth
-│       └──CARLA.pth
+│       └──SensCrowd.pth
 └──datasets
-    ├──SensCrowd
-    ├──CroHD
-    └──CARLA
+    └──SensCrowd
      
 ```
 
