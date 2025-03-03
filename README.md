@@ -1,6 +1,6 @@
 # DAANet
 
-The official implementation of "Density-assisted Adaptive Alignment Network for Crowd Flux Estimation".
+The official implementation of "Density-assisted Adaptive Alignment Network for Video Individual Counting".
 
 
 # Installation
