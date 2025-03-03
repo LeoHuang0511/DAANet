@@ -32,9 +32,6 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 * **CroHD**: Download CroHD from [here](https://motchallenge.net/data/Head_Tracking_21/). 
 * **CARLA**: Download CARLA from [here](https://drive.google.com/file/d/1hycxlqE66QGXsOo-HMWyi3WUlF2TII8r/view?usp=sharing).
 
-# Pretrained Weights
-
-* **SenseCrowd**: The weights trained with Sensecrowd can be download from [here](https://reurl.cc/Q5zpAZ)
 
 # Preparation
 
