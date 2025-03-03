@@ -35,9 +35,7 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 
 # Pretrained Weights
 
-* **SenseCrowd**: The weights trained with Sensecrowd can be download from [here](https://drive.google.com/file/d/1YBijIBMfXsAZOe1qm6desBetzT9up0FC/view?usp=sharing)
-* **CroHD**: The weights trained with CroHD can be download from [here](https://drive.google.com/file/d/1YBijIBMfXsAZOe1qm6desBetzT9up0FC/view?usp=sharing)
-* **CARLA**: The weights trained with CARLA can be download from [here](https://drive.google.com/file/d/1fHivCHX8spKrJIpCt9yt5fRFEyVg6bLc/view?usp=sharing)
+* **SenseCrowd**: The weights trained with Sensecrowd can be download from [here](https://reurl.cc/Q5zpAZ)
 
 # Preparation
 
