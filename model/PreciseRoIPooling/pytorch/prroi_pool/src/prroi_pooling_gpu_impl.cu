@@ -1,11 +1,4 @@
-/*
- * File   : prroi_pooling_gpu_impl.cu
- * Author : Tete Xiao, Jiayuan Mao
- * Email  : jasonhsiao97@gmail.com
- *
- * Distributed under terms of the MIT license.
- * Copyright (c) 2017 Megvii Technology Limited.
- */
+
 
 #include "prroi_pooling_gpu_impl.cuh"
 
