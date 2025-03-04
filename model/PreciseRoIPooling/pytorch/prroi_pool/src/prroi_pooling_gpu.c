@@ -1,12 +1,4 @@
-/*
- * File   : prroi_pooling_gpu.c
- * Author : Jiayuan Mao, Tete Xiao
- * Email  : maojiayuan@gmail.com, jasonhsiao97@gmail.com
- * Date   : 07/13/2018
- *
- * Distributed under terms of the MIT license.
- * Copyright (c) 2017 Megvii Technology Limited.
- */
+
 
 #include <math.h>
 #include <torch/extension.h>
