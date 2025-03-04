@@ -5,11 +5,8 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 
 # Installation
 
-* Clone this repo in the directory ```root/DAANet/src/``` 
-    ```bash
-    cd root/DAANet/src
-    git clone https://github.com/LeoHuang0511/DAANet.git
-    ```
+* Download this repo in the directory ```root/DAANet/src/``` 
+    
 
 * Create and activate the envirnment
     ```bash
