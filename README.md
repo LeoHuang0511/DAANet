@@ -34,7 +34,7 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 
 # Pretrained Weights
 
-* The pretrained weights of our model are available at [drive]([https://drive.google.com/file/d/1MK2IAsoOnbKBU3K-BfJ4amDfJ11BThWg/view?usp=drive_link](https://drive.google.com/drive/folders/1XBYG-cpNwLZZKDa2acr2qp0nLFLXrxpO?usp=sharing)).
+* The pretrained weights of our model are available at [drive](https://drive.google.com/drive/folders/1XBYG-cpNwLZZKDa2acr2qp0nLFLXrxpO?usp=drive_link).
 
 # Preparation
 
