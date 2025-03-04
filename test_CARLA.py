@@ -61,9 +61,6 @@ parser.add_argument(
     help='pretrained weight path')
 
 
-# parser.add_argument(
-#     '--model_path', type=str, default='./exp/SENSE/03-22_17-33_SENSE_VGG16_FPN_5e-05/ep_15_iter_115000_mae_2.211_mse_3.677_seq_MAE_6.439_WRAE_9.506_MIAE_1.447_MOAE_1.474.pth',
-#     help='pretrained weight path')
 
 
 
