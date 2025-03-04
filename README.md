@@ -32,6 +32,9 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 * **CroHD**: Download CroHD from [here](https://motchallenge.net/data/Head_Tracking_21/). 
 * **CARLA**: Download CARLA from [here](https://drive.google.com/file/d/1hycxlqE66QGXsOo-HMWyi3WUlF2TII8r/view?usp=sharing).
 
+# Pretrained Weights
+
+* The pretrained weights of our model are available at [drive]([https://drive.google.com/file/d/1MK2IAsoOnbKBU3K-BfJ4amDfJ11BThWg/view?usp=drive_link](https://drive.google.com/drive/folders/1XBYG-cpNwLZZKDa2acr2qp0nLFLXrxpO?usp=sharing)).
 
 # Preparation
 
@@ -42,9 +45,13 @@ root
 │   └──src
 ├──exp
 │   └──pretrained
-│       └──SensCrowd.pth
+│       ├──SensCrowd.pth
+│       ├──CARLA.pth
+│       └──HT21.pth
 └──datasets
-    └──SensCrowd
+    ├──Sense
+    ├──CARLA
+    └──HT21
      
 ```
 
@@ -52,7 +59,7 @@ root
 
 * Run the following command to train your own model:
     ```bash
-    python train.py --DATASET SENSE --GPU_ID 0
+    python train.py --DATASET <dataset_name> --GPU_ID 0
     ```
 * The checkpoints would be saved in ```root/DAANet/exp/```.
 
@@ -60,6 +67,6 @@ root
 
 * Run the following command to test the model pretrained on SenseCrowd:
     ```bash
-    python test_SENSE.py --MODEL_PATH ../exp/pretrained/SenseCrowd.pth --GPU_ID 0
+    python test_<dataset_name>.py --MODEL_PATH <pretrained_weights_path> --GPU_ID 0
     ```
 
