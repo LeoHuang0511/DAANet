@@ -25,7 +25,7 @@ The official implementation of "Density-assisted Adaptive Alignment Network for 
 
 * **SenseCrowd**: Download SenseCrowd from [here](https://github.com/taohan10200/DRNet).
 * **CroHD**: Download CroHD from [here](https://motchallenge.net/data/Head_Tracking_21/). 
-* **CARLA**: Download CARLA from [here](https://github.com/LeoHuang0511/FMDC?tab=readme-ov-file).
+* **CARLA**: Download CARLA from [here](https://github.com/LeoHuang0511/FMDC).
 
 
 # Preparation
