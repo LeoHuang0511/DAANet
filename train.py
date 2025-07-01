@@ -67,15 +67,19 @@ class Trainer():
             gpu_id = self.cfg.GPU_ID
             self.optimizer = optim.Adam(params)
             latest_state = torch.load(self.cfg.RESUME_PATH,map_location=self.device)
-            self.net.load_state_dict(latest_state['net'], strict=True)
-            self.optimizer.load_state_dict(latest_state['optimizer'])
-            self.epoch = latest_state['epoch']
-            self.i_tb = latest_state['i_tb']
-            self.train_record = latest_state['train_record']
-            self.exp_path = latest_state['exp_path']
-            self.exp_name = latest_state['exp_name']
-            self.cfg = latest_state['cfg']
+            self.net.load_state_dict(latest_state, strict=True)
+
+            # self.net.load_state_dict(latest_state['net'], strict=True)
+            # self.optimizer.load_state_dict(latest_state['optimizer'])
+            # self.epoch = latest_state['epoch']
+            # self.i_tb = latest_state['i_tb']
+            # self.train_record = latest_state['train_record']
+            # self.exp_path = latest_state['exp_path']
+            # self.exp_name = latest_state['exp_name']
+            # self.cfg = latest_state['cfg']
             self.cfg.GPU_ID = gpu_id
+
+
             print("Finish loading resume model")
 
         self.train_loader, self.val_loader, self.restore_transform = datasets.loading_data(self.cfg)
@@ -288,8 +292,8 @@ class Trainer():
                         continue
                     
                     else:
-
-                        den_scales, final_den, _, out_den, in_den, _, _, _, _, _, _, _, _, _ = self.net(img)
+                        
+                        den_scales, final_den, _, out_den, in_den, _, _, _, _, _, = self.net(img)
 
                         
                         pre_inf_cnt, pre_out_cnt = \
@@ -525,7 +529,7 @@ if __name__=='__main__':
     now = time.strftime("%m-%d_%H-%M", time.localtime())
 
     if cfg.DATASET == "SENSE":
-        cfg.TRAIN_FRAME_INTERVALS = [5,17]
+        cfg.TRAIN_FRAME_INTERVALS = [5,25]
         cfg.VAL_INTERVALS = 10
         # cfg.SAVE_VIS_FREQ = 5000
         # cfg.VAL_FREQ = 2500

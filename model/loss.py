@@ -52,7 +52,6 @@ class ComputeKPILoss(object):
              # # # counting MSE loss
             assert den_scales[scale].shape == gt_den_scales[scale].shape
 
-            
             weight = F.adaptive_avg_pool2d(confidence[:,scale,:,:].unsqueeze(1), den_scales[scale].shape[2:])
             self.cnt_loss_scales[scale] += F.mse_loss(den_scales[scale]*self.DEN_FACTOR, weight * gt_den_scales[scale] * self.DEN_FACTOR) * self.scale_weight[scale]
             

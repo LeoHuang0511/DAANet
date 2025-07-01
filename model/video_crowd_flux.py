@@ -21,7 +21,7 @@ class DAANet(nn.Module):
         self.Extractor = backbone_FPN(cfg)
         num_feat = 128
         
-        self.deformable_alignment = HDFAlignment(cfg, num_feat, scale_num=3)
+        self.deformable_alignment = MOFAlignment(cfg, num_feat, scale_num=3)
         
 
         self.mask_predict_layer = nn.Sequential(
@@ -65,7 +65,7 @@ class DAANet(nn.Module):
         self.cfg = cfg
 
 
-    def DFE(self, feature, attns):
+    def DDA(self, feature, attns):
         feature1 = []
         feature2 = []
         for scale in range(len(feature)):
@@ -107,7 +107,7 @@ class DAANet(nn.Module):
 
 
 
-        feature1, feature2 = self.DFE(feature, attns)
+        feature1, feature2 = self.DDA(feature, attns)
         f, f_flow , b_flow, f1, f2 = self.deformable_alignment(feature1, feature2)
         
         mask = self.mask_predict_layer(f)
@@ -124,10 +124,10 @@ class DAANet(nn.Module):
 
 
 
-class HDFAlignment(nn.Module):
+class MOFAlignment(nn.Module):
 
     def __init__(self,cfg, num_feat, scale_num):
-        super(HDFAlignment, self).__init__()
+        super(MOFAlignment, self).__init__()
         
         self.channel_size = num_feat
 

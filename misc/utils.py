@@ -150,6 +150,7 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         gt_den_scales_2_map = []
         attn_map_scale_1 = []
         attn_map_scale_2 = []
+        a = [0,0,0]
 
     
 
@@ -170,10 +171,10 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
 
             ########## density map ###############
 
-            den_scale_1 = den_scales[i][0].detach().cpu().numpy()
-            den_scale_2 = den_scales[i][1].detach().cpu().numpy()
-            gt_den_scale_1 = gt_den_scales[i][0].detach().cpu().numpy()
-            gt_den_scale_2 = gt_den_scales[i][1].detach().cpu().numpy()
+            den_scale_1 = den_scales[i][0].detach().cpu().numpy()[0]
+            den_scale_2 = den_scales[i][1].detach().cpu().numpy()[0]
+            gt_den_scale_1 = gt_den_scales[i][0].detach().cpu().numpy()[0]
+            gt_den_scale_2 = gt_den_scales[i][1].detach().cpu().numpy()[0]
 
             den_scale_1 = cv2.GaussianBlur(den_scale_1, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
             den_scale_2 = cv2.GaussianBlur(den_scale_2, (int(gaussian_kernel/2**i+a[i]),int(gaussian_kernel/2**i+a[i]),),int(10/2**i))
@@ -215,9 +216,9 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
             
             
 
-        den0_map = cv2.GaussianBlur(den0, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        den0_map = cv2.GaussianBlur(den0[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
         den0_map = cv2.resize(cv2.applyColorMap((255 * tensor[2] / (tensor[2].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
-        den1_map = cv2.GaussianBlur(den1, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        den1_map = cv2.GaussianBlur(den1[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
         den1_map = cv2.resize(cv2.applyColorMap((255 * tensor[3] / (tensor[3].max() + 1e-10)).astype(np.uint8).squeeze(), cv2.COLORMAP_JET), (UNIT_W, UNIT_H)) 
 
         ########## mask ###############
@@ -226,10 +227,10 @@ def save_results_mask(cfg, exp_path, exp_name, scene_name, iter, restore, batch,
         gt_mask_out= gt_mask[0,0:1,:,:].detach().cpu().numpy()
         gt_mask_in = gt_mask[0,1:2,:,:].detach().cpu().numpy()
 
-        mask_out = cv2.GaussianBlur(mask_out, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
-        mask_in = cv2.GaussianBlur(mask_in, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
-        gt_mask_out = cv2.GaussianBlur(gt_mask_out, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
-        gt_mask_in = cv2.GaussianBlur(gt_mask_in, (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        mask_out = cv2.GaussianBlur(mask_out[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        mask_in = cv2.GaussianBlur(mask_in[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        gt_mask_out = cv2.GaussianBlur(gt_mask_out[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
+        gt_mask_in = cv2.GaussianBlur(gt_mask_in[0], (gaussian_kernel,gaussian_kernel,),gaussian_sigma)
         gt_mask_out[gt_mask_out>0.15] = 1
         gt_mask_in[gt_mask_in>0.15] = 1
 

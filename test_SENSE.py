@@ -30,7 +30,7 @@ parser.add_argument(
     '--OUTPUT_DIR', type=str, default='./test_demo',
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
-    '--TEST_INTERVALS', type=int, default=11,
+    '--TEST_INTERVALS', type=int, default=15,
     help='Directory where to write output frames (If None, no output)')
 parser.add_argument(
     '--SKIP_FLAG', type=bool, default=True,

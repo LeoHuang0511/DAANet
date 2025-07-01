@@ -160,7 +160,7 @@ class ScaleByRateWithMin(object):
 
         new_w = self.min_w
         new_h = self.min_h
-        img = img.resize((new_w, new_h), Image.ANTIALIAS)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
 
         rate = new_w / w 
        
