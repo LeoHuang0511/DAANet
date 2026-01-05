@@ -123,12 +123,13 @@ def test(cfg, cfg_data):
             #     break
             gen_tqdm = tqdm(sub_valset)
             video_time = len(sub_valset) + cfg.TEST_INTERVALS
-            print(video_time)
+            # print(video_time)
 
             scene_name = ''
             pred_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
-            gt_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
+            gt_dict = {'id': scene_id, 'time': video_time, 'first_frame': 0, 'inflow': [], 'outflow': [], "ids": 0}
             img_pair_idx = 0
+            # gt_vic = {'v_00010': 20, 'IMG_4879_cut_06': 26, 'IMG_5214_cut_09_rot': 107, '1019_IMG_1639_cut_03': 58, '0824_6_cut_01': 72, '1123_IMG_5896_cut_05': 57, '1130_video2_cut_08_crop': 91, 'IMG_4602_cut_02': 44, '0824_3_cut_02': 28, 'v_00004': 15, '1123_IMG_5897_cut_02_rot': 67, 'IMG_4523_cut_01_crop': 81, '1116_IMG_5317_cut_01': 59, 'IMG_4696_cut_03': 19, 'IMG_4686_cut_02': 52, 'IMG_5160_cut_01_rot': 166, 'IMG_5159_cut_01': 79, 'IMG_4881_cut_01_rot': 23, '1123_IMG_5896_cut_02': 38, 'IMG_4597_cut_01': 30, '0817_7_cut_01_crop': 36, 'IMG_4694_cut_03': 26, 'VID_20200823_162741_cut_06_rot': 36, 'IMG_4881_cut_02_rot': 29, '1123_IMG_5896_cut_03': 58, 'TOSX8318_crop': 22, 'IMG_5059_cut_01_rot': 95, 'IMG_5159_cut_02': 81, 'C0013_1_cut_04': 241, 'v_00003': 33, 'IMG_5219_cut_01': 51, 'VID_20200823_163428_cut_01_rot_crop': 45, '1_cut_04': 53, 'IMG_4639_cut_03': 66, 'IMG_4694_cut_04': 18, 'IMG_4882_cut_03': 26, 'VID_20200823_164830_cut_05_rot_crop': 50, 'VID_20200823_163428_cut_02_rot_crop': 53, 'IMG_5052_cut_05': 78, 'IMG_4695_cut_03': 11, '1130_video4_cut_06_crop': 166, '1123_IMG_5908_cut_05': 62, 'IMG_4639_cut_04': 46, '1019_IMG_5431_cut_01': 66, '0824_1_cut_01_rot_crop': 30, 'IMG_4604_cut_04': 61, 'IMG_5219_cut_04': 74, '0817_2_cut_01': 53, '1123_IMG_5902_cut_02': 102, 'IMG_5053_cut_03': 47, '1123_IMG_5899_cut_06_rot': 85, 'IMG_5053_cut_01': 45, 'IMG_5046_cut_05_rot': 91, 'v_00002': 186, 'IMG_5214_cut_06_rot': 68, 'IMG_4882_cut_08': 21, '1019_IMG_5434_cut_04_crop': 171, 'IMG_4885_cut_02_crop': 65, '1102_IMG_5766_cut_05': 33, 'v_00015': 148, 'IMG_5214_cut_01_rot': 133, 'IMG_4599_cut_02': 29, 'IMG_4505_cut_01': 29, '0817_2_cut_02': 51, '1123_IMG_5897_cut_01_rot': 60, 'IMG_5164_cut_06_rot': 54, 'IMG_5161_cut_02': 90, 'Crowd_Flow_0003_cut_001': 97, 'IMG_4698_cut_02': 45, 'IMG_4882_cut_10': 21, 'IMG_5217_cut_04': 52, 'IMG_4582_cut_04': 33, '1123_IMG_5903_cut_01': 109, '0824_1_cut_02_rot_crop': 30, 'IMG_4636_cut_03': 33, '1130_video4_cut_03_crop': 262, 'v_00009': 23, '1019_IMG_1650_cut_01_rot_crop': 33, 'IMG_5060_cut_02_rot': 58, 'IMG_4602_cut_03': 38, '1102_IMG_5764_cut_08': 40, 'video_004': 275, 'IMG_4881_cut_08_rot': 30, 'IMG_4882_cut_05': 19, 'v_00013': 22, 'IMG_4690_cut_02': 42, '0817_5_cut_01_rot': 74, 'video_003_crop': 142, 'IMG_1500_cut_01_crop': 62, 'IMG_4879_cut_03': 20, 'IMG_4521_crop': 61, 'IMG_5135_cut_01': 23, '1_cut_02': 49, 'IMG_4604_cut_03': 65, '1025_IMG_1728_cut_02': 157, 'IMG_4597_cut_02': 28, 'IMG_1497_cut_01': 31, 'IMG_5165_cut_03_rot': 41, 'IMG_4527_cut_01_rot': 89, 'IMG_4686_cut_04': 35, 'IMG_4525_cut_crop': 102, '1123_IMG_5899_cut_05_rot': 86, '3_cut_04': 62, 'IMG_4584_cut_03': 58, 'IMG_5053_cut_06': 45, 'IMG_4695_cut_01': 19, 'IMG_5168_cut_04': 94, '1123_IMG_5896_cut_06': 51, 'IMG_4524_cut_01': 80, 'IMG_5055_cut_05_rot': 50, '1019_IMG_5490_cut_02_rot': 57, 'IMG_5214_cut_05_rot': 94, 'IMG_1498_cut_01_crop': 43, '3_cut_03': 67, 'IMG_4880_cut_10': 24, 'IMG_5046_cut_06_rot': 80, '1130_video4_cut_07_crop': 230, 'IMG_5136_cut_02': 47, '1130_video2_cut_04_crop': 156, 'IMG_4684_cut_02': 26, '1019_IMG_1639_cut_05': 62, '1130_video5_cut_01_crop': 129, '1019_IMG_5431_cut_02': 62, 'IMG_4686_cut_06': 40, 'IMG_4695_cut_06': 31, 'IMG_5215_cut_05': 71, '1019_IMG_5433_cut_06': 46, 'IMG_5055_cut_02_rot': 57, '1116_IMG_5311_cut_02': 62, '1019_IMG_5434_cut_05_crop': 131, 'IMG_5047_cut_05_rot': 67, 'IMG_5053_cut_05': 42, '1116_IMG_5310_cut_04': 82, 'IMG_5052_cut_02': 98, 'IMG_5047_cut_03_rot': 45, 'VID_20200823_162122_cut_06': 105, 'IMG_4882_cut_09': 21, 'v_00021': 103, 'IMG_4687_cut_02': 31, '1025_IMG_1728_cut_03': 152, '1102_IMG_5764_cut_06': 42, '1019_IMG_1650_cut_05_rot_crop': 51, 'IMG_5216_cut_01': 61, 'IMG_4600_cut_01': 31, 'IMG_4610_cut_01': 50, 'IMG_5051_cut_02_rot': 130, 'IMG_5214_cut_02_rot': 120, '1123_IMG_5897_cut_06_rot': 59, 'IMG_5051_cut_01_rot': 73, '1019_IMG_5490_cut_06_rot': 42, '1019_IMG_5433_cut_05': 44, 'IMG_5214_cut_07_rot': 93, '1019_IMG_5434_cut_01_crop': 103, 'IMG_4700_cut_04': 38, 'IMG_4882_cut_06': 29, 'VID_20200823_162741_cut_04_rot': 23, 'IMG_5219_cut_05': 64, 'IMG_5136_cut_01': 84, 'IMG_5164_cut_02_rot': 63, 'Crowd_Flow_0003_cut_004': 149, '1123_IMG_5899_cut_04_rot': 71, 'IMG_4524_cut_02': 94, 'IMG_4885_cut_03_crop': 40, 'IMG_1500_cut_04_crop': 62, 'IMG_1497_cut_04': 24, '1102_IMG_5764_cut_05': 73, '1116_IMG_5318_cut_01': 75, 'IMG_5167_cut_02': 87, 'IMG_5213_cut_05_rot': 64, 'IMG_4584_cut_01': 58, 'IMG_5169_cut_03': 82, '2_cut_03': 17, 'IMG_5048_cut_05_rot': 87, 'IMG_4885_cut_01_crop': 70, '1025_IMG_1728_cut_05': 263, 'IMG_4582_cut_03': 46, 'IMG_4880_cut_02': 45, 'IMG_1500_cut_02_crop': 56, 'IMG_5168_cut_02': 110, 'VID_20200823_163428_cut_03_rot_crop': 44, '1019_IMG_5490_cut_03_rot': 34, '1123_IMG_5899_cut_03_rot': 70, 'IMG_5213_cut_09_rot': 60, 'VID_20200823_162122_cut_01': 142, '1019_IMG_5491_cut_06': 114, 'IMG_5169_cut_04': 65, '1102_IMG_5764_cut_03': 59, 'VID_20200823_162122_cut_05': 120, 'IMG_4506_cut_02': 10, 'IMG_5164_cut_09_rot': 48, 'IMG_5161_cut_01': 113, '1116_IMG_5315_cut_01': 46, '0817_3_cut_02': 44, '1123_IMG_5903_cut_06': 110, 'C0013_1_cut_01': 229, 'IMG_5219_cut_09': 53, 'IMG_5215_cut_02': 66, 'IMG_4607_cut_02': 62, '1123_IMG_5903_cut_04': 122, 'IMG_4879_cut_05': 41, 'video_001': 213, 'IMG_4698_cut_05': 20, 'IMG_4687_cut_01': 32, 'IMG_5053_cut_02': 31, 'IMG_6763_cut_02': 32, 'IMG_4604_cut_02': 66, 'IMG_5057_cut_01': 63, 'IMG_4880_cut_05': 45, 'IMG_4636_cut_02': 42, 'IMG_4696_cut_02': 22, 'IMG_5051_cut_04_rot': 69, '1116_IMG_5310_cut_02': 89, 'IMG_4686_cut_03': 42, 'IMG_4881_cut_04_rot': 23, '1025_IMG_1728_cut_04': 149, '1130_video4_cut_02_crop': 365, 'IMG_5058_cut_01': 68, '0824_2_cut_02_rot': 47, 'IMG_5215_cut_03': 65, 'IMG_4599_cut_03': 12, 'IMG_5159_cut_03': 87, 'IMG_5055_cut_01_rot': 46, 'IMG_5217_cut_01': 56, 'IMG_5214_cut_03_rot': 94, 'IMG_5059_cut_03_rot': 65, 'IMG_5213_cut_01_rot': 60, '1019_IMG_5495_cut_03': 60, 'RJJQ9250_1_crop': 251, '1019_IMG_5491_cut_01': 108, 'IMG_4694_cut_01': 26, 'VID_20200823_162122_cut_03': 113, 'IMG_4879_cut_01': 38, '1130_video2_cut_02_crop': 208, 'IMG_5046_cut_03_rot': 61, '1019_IMG_5490_cut_04_rot': 49, 'IMG_4883_cut_02_crop': 70, '1123_IMG_5908_cut_06': 63, 'IMG_5165_cut_02_rot': 64, '1123_IMG_5897_cut_05_rot': 31, 'IMG_5165_cut_01_rot': 60, 'IMG_4964_cut_02_rot': 19, 'IMG_5168_cut_03': 103, 'IMG_5164_cut_07_rot': 40, 'IMG_4584_cut_04': 27, 'IMG_6764_cut_04': 69, 'IMG_5218_cut_01': 69, '1130_video5_cut_03_crop': 96, 'IMG_4517_cut_02_crop': 39, 'IMG_5158_cut_02': 33, 'IMG_4600_cut_02': 19, 'IMG_5215_cut_07': 75, 'LTLU9157_crop': 160, 'IMG_4638_cut_01': 21, 'C0013_1_cut_02': 251}
             for vi, data in enumerate(gen_tqdm, 0):
                 img, target = data
                 # import pdb
@@ -136,6 +137,9 @@ def test(cfg, cfg_data):
                 img,target = img[0],target[0]
                 scene_name = target[0]['scene_name']
                 img = torch.stack(img, 0).cuda()
+
+                # gt_dict['ids'] = gt_vic[scene_name]
+
                 b, c, h, w = img.shape
                 if h % 64 != 0:
                     pad_h = 64 - h % 64
@@ -149,10 +153,13 @@ def test(cfg, cfg_data):
                 img = F.pad(img, pad_dims, "constant")
                 img_pair_num = img.shape[0]//2
 
+
                 if vi % cfg.TEST_INTERVALS == 0 or vi == len(sub_valset) - 1:
                     frame_signal = 'match'
+
                 else:
                     frame_signal = 'skip'
+                    
 
                 if frame_signal == 'match' or not cfg.SKIP_FLAG:
 
@@ -219,9 +226,9 @@ def test(cfg, cfg_data):
                 
                     pre_crowdflow_cnt, gt_crowdflow_cnt, _, _ = compute_metrics_single_scene(pred_dict, gt_dict, 1)
 
-                    print(f'den_gt: {gt_count} den_pre: {pred_cnt} mae: {s_mae}')
-                    print(f'gt_crowd_flow:{gt_crowdflow_cnt.cpu().numpy()}, gt_inflow: {gt_in_cnt.cpu().numpy()}')
-                    print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.cpu().numpy(),2)}')
+                    # print(f'den_gt: {gt_count} den_pre: {pred_cnt} mae: {s_mae}')
+                    # print(f'gt_crowd_flow:{gt_crowdflow_cnt}, gt_inflow: {gt_in_cnt.cpu().numpy()}')
+                    # print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inflow.cpu().numpy(),2)}')
 
 
                     img_pair_idx+=1
@@ -281,10 +288,14 @@ def test(cfg, cfg_data):
                     np.save(os.path.join(dir,'SENSE_cnt.py'),save_cnt_result.numpy())
 
                     print('Pre vs GT:', cnt_result)
-                    # f.write(f'Pre vs GT: {cnt_result}\n')
+                    f.write(f'Pre vs GT: {cnt_result}\n')
 
             f.write(f"{'-'*250}\n\n")
-            
+            '''
+            IMG_5169_cut_03 pred_video_num: 82 gt_video_num: 82 RMAE: 0.0                    
+            IMG_5169_cut_03                         
+            82              
+            '''
 
 
 
