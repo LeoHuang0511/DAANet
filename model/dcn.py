@@ -70,11 +70,12 @@ class MultiScaleDeformableConv(nn.Module):
         if self.offset != None:
             offset_map = self.offset.repeat(1,self.kernel_size[0] * self.kernel_size[1],1,1)
         else:
+            offset_maps = []
             for i in range(self.offset_groups):
-                offset_input = torch.concat([warp_ref[:,i*num_group_channel:(i+1)*num_group_channel,:,:], 
-                    source[:,i*num_group_channel:(i+1)*num_group_channel,:,:]], axis = 1)
-                offset_map.append(self.offset_conv(offset_input))
-            offset_map = torch.concat(offset_map, axis = 1)
+                offset_input = torch.cat([warp_ref[:,i*num_group_channel:(i+1)*num_group_channel,:,:], 
+                    source[:,i*num_group_channel:(i+1)*num_group_channel,:,:]], dim=1)
+                offset_maps.append(self.offset_conv(offset_input))
+            offset_map = torch.cat(offset_maps, dim=1)
 
         #offset range
         offset_range = (min(h, w)*0.5) /2

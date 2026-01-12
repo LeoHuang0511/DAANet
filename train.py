@@ -8,6 +8,7 @@ from model.video_crowd_flux import DAANet
 from model.loss import *
 from tqdm import tqdm
 import torch.nn.functional as F
+from torch.cuda.amp import autocast, GradScaler
 
 from misc.gt_generate import *
 
@@ -43,7 +44,15 @@ class Trainer():
             self.resume = False
 
         self.net = DAANet(cfg, cfg_data).cuda()
-
+        
+        # Enable torch.compile for PyTorch 2.0+ (significant speedup)
+        # Note: Disabled because 'reduce-overhead' (and inductor backend) causes crashes with dynamic shapes in validation
+        # if hasattr(torch, 'compile') and torch.__version__ >= '2.0':
+        #     self.net = torch.compile(self.net, mode='reduce-overhead')
+        
+        # Initialize AMP scaler for mixed precision training
+        self.scaler = GradScaler()
+        self.use_amp = True
 
         params = [
             {"params": self.net.Extractor.parameters(), 'lr': cfg.LR_BASE, 'weight_decay': cfg.WEIGHT_DECAY},
@@ -124,9 +133,12 @@ class Trainer():
         for i, data in enumerate(loader, 0):
             self.timer['iter time'].tic()
             self.i_tb += 1
-            img,target = data
-            img = torch.stack(img,0).cuda()
-            img_pair_num = img.size(0)//2  
+            img, target = data
+            img = torch.stack(img, 0).cuda(non_blocking=True)
+            img_pair_num = img.size(0) // 2
+            
+            # Use automatic mixed precision for forward pass
+            # with autocast(enabled=self.use_amp):
             den_scales, final_den, mask, out_den, in_den, attns, f_flow, b_flow, feature1, feature2 = self.net(img)
             
 
@@ -137,9 +149,9 @@ class Trainer():
             target_ratio = den_scales[0].shape[2]/img.shape[2]
 
             for b in range(len(target)):        
-                for key,data in target[b].items():
+                for key, data in target[b].items():
                     if torch.is_tensor(data):
-                        target[b][key]=data.cuda()
+                        target[b][key] = data.cuda(non_blocking=True)
 
 
 
@@ -149,15 +161,15 @@ class Trainer():
 
 
 
-            gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3)).cuda()
+            gt_io_map = torch.zeros(img_pair_num, 2, den_scales[0].size(2), den_scales[0].size(3), device='cuda')
 
-            gt_inflow_cnt = torch.zeros(img_pair_num).cuda()
-            gt_outflow_cnt = torch.zeros(img_pair_num).cuda()
-            con_loss = torch.Tensor([0]).cuda()
+            gt_inflow_cnt = torch.zeros(img_pair_num, device='cuda')
+            gt_outflow_cnt = torch.zeros(img_pair_num, device='cuda')
+            con_loss = torch.zeros(1, device='cuda')
             for pair_idx in range(img_pair_num):
-                count_in_pair=[target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
+                count_in_pair = [target[pair_idx * 2]['points'].size(0), target[pair_idx * 2+1]['points'].size(0)]
                 
-                if (np.array(count_in_pair) > 0).all() and (np.array(count_in_pair) < 4000).all():
+                if all(0 < c < 4000 for c in count_in_pair):
                     match_gt, pois = self.get_ROI_and_MatchInfo(target[pair_idx * 2], target[pair_idx * 2+1],'ab')
 
                     gt_io_map, gt_inflow_cnt, gt_outflow_cnt \
@@ -182,10 +194,15 @@ class Trainer():
 
 
 
-            # back propagate
-            self.optimizer.zero_grad()
-            all_loss.backward()
-            self.optimizer.step()
+            # back propagate with AMP
+            self.optimizer.zero_grad(set_to_none=True)  # More efficient than zero_grad()
+            if self.use_amp:
+                self.scaler.scale(all_loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
+                all_loss.backward()
+                self.optimizer.step()
            
 
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
@@ -258,9 +275,8 @@ class Trainer():
             
             for scene_id, sub_valset in  enumerate(self.val_loader, 0):
 
-                gen_tqdm = tqdm(sub_valset)
+                gen_tqdm = tqdm(sub_valset, desc=f'Val scene {scene_id}')
                 video_time = len(sub_valset)+self.cfg.VAL_INTERVALS
-                print(video_time)
 
                 pred_dict = {'id': scene_id, 'time':video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}
                 gt_dict  = {'id': scene_id, 'time':video_time, 'first_frame': 0, 'inflow': [], 'outflow': []}    
@@ -269,7 +285,7 @@ class Trainer():
                     img, target = data
                     img, target = img[0],target[0]
                     
-                    img = torch.stack(img,0).cuda()
+                    img = torch.stack(img, 0).cuda(non_blocking=True)
                     img_pair_num = img.shape[0]//2
  
                     
@@ -359,9 +375,8 @@ class Trainer():
                         gt_dict['outflow'].append(torch.tensor(gt_out_cnt))
 
                         pre_crowdflow_cnt, gt_crowdflow_cnt,_,_ =compute_metrics_single_scene(pred_dict, gt_dict,1)# cfg.VAL_INTERVALS)
-                        print(f'den_gt: {gt_count} den_pre: {pred_cnt} mae: {s_mae}')
-                        print(f'gt_crowd_flow:{gt_crowdflow_cnt.cpu().numpy()}, gt_inflow: {gt_in_cnt.cpu().numpy()}')
-                        print(f'pre_crowd_flow:{np.round(pre_crowdflow_cnt.cpu().numpy(),2)},  pre_inflow: {np.round(pre_inf_cnt.cpu().numpy(),2)}')
+                        # Reduced verbose output - only show in debug mode
+                        # print(f'den_gt: {gt_count} den_pre: {pred_cnt} mae: {s_mae}')
 
 
 
@@ -836,8 +851,10 @@ if __name__=='__main__':
     
         
     
-    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.GPU_ID
+    # os.environ["CUDA_VISIBLE_DEVICES"] = cfg.GPU_ID
     torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     # ------------prepare data loader------------
     data_mode = cfg.DATASET

@@ -99,33 +99,24 @@ class backbone_FPN(nn.Module):
 
 
     def forward(self, x):
-        f_list = []
         x1 = self.layer1(x)
         x2 = self.layer2(x1)
         x3 = self.layer3(x2)
+        
         if self.cfg.BACKBONE == 'swin':
-            x1 = x1.permute(0,3,1,2)
-            x2 = x2.permute(0,3,1,2)
-            x3 = x3.permute(0,3,1,2)
+            x1 = x1.permute(0, 3, 1, 2).contiguous()
+            x2 = x2.permute(0, 3, 1, 2).contiguous()
+            x3 = x3.permute(0, 3, 1, 2).contiguous()
 
-        f_list.append(x1)
-        f_list.append(x2)
-        f_list.append(x3)
-
-
+        f_list = [x1, x2, x3]
 
         f_den = self.neck(f_list)
         den_scale = []
         for scale in range(len(f_den)):
-            
             f_den[scale] = self.scale_loc_bottleneck[scale](f_den[scale])
             den_scale.append(self.scale_loc_head[scale](f_den[scale]))
 
-
         f_mask = self.neck2f(f_list)
-       
-        
-
 
         return f_mask, den_scale, f_den
 # -

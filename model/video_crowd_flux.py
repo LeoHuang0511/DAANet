@@ -68,12 +68,14 @@ class DAANet(nn.Module):
     def DDA(self, feature, attns):
         feature1 = []
         feature2 = []
+        # Pre-detach attention for all scales at once
+        # attns_detached = attns
+        attns_detached = attns.detach()
         for scale in range(len(feature)):
-            attn = attns[:,scale,:,:].detach().unsqueeze(1)
-            attn = F.adaptive_avg_pool2d(attn, feature[scale].shape[2:])
+            attn = F.adaptive_avg_pool2d(attns_detached[:, scale:scale+1, :, :], feature[scale].shape[2:])
             feature[scale] = attn * feature[scale]
-            feature1.append(feature[scale][0::2,:,:,:]) # (b,c,h,w)
-            feature2.append(feature[scale][1::2,:,:,:])
+            feature1.append(feature[scale][0::2, :, :, :]) # (b,c,h,w)
+            feature2.append(feature[scale][1::2, :, :, :])
 
         return feature1, feature2
 
@@ -88,11 +90,13 @@ class DAANet(nn.Module):
         dens = []
         
         for scale in range(len(den_scales)):
-
             den_scales[scale] = den_scales[scale] / self.cfg.DEN_FACTOR
-            dens.append(F.interpolate(den_scales[scale], scale_factor=2**scale,mode='bilinear',align_corners=True) / 2**(2*scale))
-
-            feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE)) # (b*2, 128, h/conf_block_size, w/conf_block_size)
+            # Use in-place scaling for interpolation factor
+            scale_factor = 2 ** scale
+            scaled = F.interpolate(den_scales[scale], scale_factor=scale_factor, mode='bilinear', align_corners=True) / (scale_factor ** 2)
+            dens.append(scaled)
+            
+            feature_den[scale] = F.adaptive_avg_pool2d(feature_den[scale], (size[2]//self.cfg.CONF_BLOCK_SIZE, size[3]//self.cfg.CONF_BLOCK_SIZE))
         
 
         dens = torch.cat(dens, dim=1) # (b*2,3,h,w)
@@ -101,8 +105,8 @@ class DAANet(nn.Module):
 
         f_attn = torch.cat([feature_den[0],  feature_den[1], feature_den[2]], dim=1) # (b*2, 384, 48, 64)
         attns = self.ASAM(f_attn)
-        attns = F.upsample_nearest(attns, scale_factor = self.cfg.CONF_BLOCK_SIZE).cuda()
-        attns = torch.softmax(attns,dim=1) # (b*2,3,h,w)
+        attns = F.interpolate(attns, scale_factor=self.cfg.CONF_BLOCK_SIZE, mode='nearest')
+        attns = torch.softmax(attns, dim=1) # (b*2,3,h,w)
         
 
 
@@ -165,11 +169,6 @@ class MOFAlignment(nn.Module):
 
 
     def forward(self, f1, f2):
-
-        
-       
-       
-
         f_flow = []
         b_flow = []
         f1_aligned = []
@@ -186,15 +185,19 @@ class MOFAlignment(nn.Module):
             f1_aligned.append(f1_align)
             f2_aligned.append(f2_align)
 
-        
-        f1 =torch.cat([f1[0],  F.interpolate(f1[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f1[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        f2 =torch.cat([f2[0],  F.interpolate(f2[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f2[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        f1_aligned =torch.cat([f1_aligned[0],  F.interpolate(f1_aligned[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f1_aligned[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
-        f2_aligned =torch.cat([f2_aligned[0],  F.interpolate(f2_aligned[1],scale_factor=2,mode='bilinear',align_corners=True),
-                      F.interpolate(f2_aligned[2],scale_factor=4, mode='bilinear',align_corners=True)], dim=1)
+        # Batch interpolation operations together for better GPU utilization
+        f1 = torch.cat([f1[0], 
+                        F.interpolate(f1[1], scale_factor=2, mode='bilinear', align_corners=True),
+                        F.interpolate(f1[2], scale_factor=4, mode='bilinear', align_corners=True)], dim=1)
+        f2 = torch.cat([f2[0], 
+                        F.interpolate(f2[1], scale_factor=2, mode='bilinear', align_corners=True),
+                        F.interpolate(f2[2], scale_factor=4, mode='bilinear', align_corners=True)], dim=1)
+        f1_aligned = torch.cat([f1_aligned[0], 
+                                F.interpolate(f1_aligned[1], scale_factor=2, mode='bilinear', align_corners=True),
+                                F.interpolate(f1_aligned[2], scale_factor=4, mode='bilinear', align_corners=True)], dim=1)
+        f2_aligned = torch.cat([f2_aligned[0], 
+                                F.interpolate(f2_aligned[1], scale_factor=2, mode='bilinear', align_corners=True),
+                                F.interpolate(f2_aligned[2], scale_factor=4, mode='bilinear', align_corners=True)], dim=1)
 
 
 

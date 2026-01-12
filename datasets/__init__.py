@@ -95,7 +95,12 @@ def createTrainData(datasetname, Dataset, cfg, cfg_data):
                                                    n_per=cfg.TRAIN_BATCH_SIZE)
     
 
-    train_loader = DataLoader(train_set, batch_sampler=train_sampler, num_workers=cfg.WORKER, collate_fn=collate_fn, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_sampler=train_sampler, 
+                              num_workers=cfg.WORKER, 
+                              collate_fn=collate_fn, 
+                              pin_memory=True,
+                              persistent_workers=cfg.WORKER > 0,
+                              prefetch_factor=2 if cfg.WORKER > 0 else None)
     print('dataset is {}, images num is {}'.format(datasetname, train_set.__len__()))
 
     return  train_loader
@@ -141,7 +146,6 @@ def createValTestData(datasetname, Dataset, cfg, cfg_data,mode ='val'):
         scene_names = [i.strip() for i in scene_names]
     data_loader = []
     for scene_name in scene_names:
-        print(scene_name)
         sub_dataset = Dataset(scene_name=scene_name,
                                 base_path=cfg_data.DATA_PATH,
                                 cfg=cfg,

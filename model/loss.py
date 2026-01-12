@@ -109,22 +109,25 @@ class ComputeKPILoss(object):
         return mdesc0, mdesc1
     
     def contrastive_loss(self, mdesc0, mdesc1, idx0, idx1):
-        sim_matrix = torch.einsum('bdn,bdm->bnm', mdesc0, mdesc1)  #inner product (n,m)
-        # mdesc0(n,256) mdesc1(m,256) frame1 n peoples frames 2 m peoples
-        m0 = torch.norm(mdesc0,dim = 1) #l2norm
-        m1 = torch.norm(mdesc1,dim = 1)
-        norm = torch.einsum('bn,bm->bnm',m0,m1) + 1e-7 # (n,m)
-        exp_term = torch.exp(sim_matrix / (256 ** .5 )/ norm)[0]
-        try:
-            topk = torch.topk(exp_term[idx0],50,dim = 1).values #(c,b) # # of negative 
-        except:
+        # Normalize descriptors for more stable computation
+        mdesc0_norm = F.normalize(mdesc0, p=2, dim=1)
+        mdesc1_norm = F.normalize(mdesc1, p=2, dim=1)
+        
+        # Compute similarity matrix efficiently
+        sim_matrix = torch.einsum('bdn,bdm->bnm', mdesc0_norm, mdesc1_norm) / (256 ** 0.5)
+        exp_term = torch.exp(sim_matrix)[0]
+        
+        # Get topk values with fallback
+        num_neg = min(50, exp_term.shape[1])
+        if num_neg > 0:
+            topk = torch.topk(exp_term[idx0], num_neg, dim=1).values
+        else:
             topk = exp_term[idx0]
 
-        denominator = torch.sum(topk,dim=1)   # denominator
-        numerator = exp_term[idx0, idx1]   # numerator 
-        loss =  torch.sum(-torch.log(numerator / denominator +1e-7))
+        denominator = topk.sum(dim=1)
+        numerator = exp_term[idx0, idx1]
+        loss = -torch.log(numerator / (denominator + 1e-7) + 1e-7).sum()
         
-
         return loss
 
 

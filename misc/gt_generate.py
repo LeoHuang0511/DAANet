@@ -24,22 +24,14 @@ class GenerateGT():
         gt_den = self.Gaussian(dot_map)
         assert shape == gt_den.shape
 
-        gt_den_scales = []
-        gt_den_scales.append(gt_den)
+        gt_den_scales = [gt_den]
 
-        for scale in range(1,scale_num):
-            for i in range(gt_den.shape[0]):
-                # multi-scale density gt
-                gt_den_np = gt_den[i].detach().cpu().numpy().squeeze().copy()
-                den = cv2.resize(gt_den_np,(int(gt_den_np.shape[1]/(2**scale)),int(gt_den_np.shape[0]/(2**scale))),interpolation = cv2.INTER_CUBIC)* ((2**scale)**2)
-                
-                
-                if i == 0:
-                    dengt = np.expand_dims(den,0)
-
-                else:
-                    dengt = np.vstack((dengt,np.expand_dims(den,0)))
-            gt_den_scales.append(torch.Tensor(dengt[:,None,:,:]).cuda())
+        # Use torch interpolation instead of cv2.resize for GPU acceleration
+        for scale in range(1, scale_num):
+            scale_factor = 1.0 / (2 ** scale)
+            # Use interpolate which is much faster on GPU
+            scaled_den = F.interpolate(gt_den, scale_factor=scale_factor, mode='bilinear', align_corners=False) * ((2**scale)**2)
+            gt_den_scales.append(scaled_den)
 
         return gt_den_scales
     
