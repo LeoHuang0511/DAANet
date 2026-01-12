@@ -133,12 +133,9 @@ class Trainer():
         for i, data in enumerate(loader, 0):
             self.timer['iter time'].tic()
             self.i_tb += 1
-            img, target = data
-            img = torch.stack(img, 0).cuda(non_blocking=True)
-            img_pair_num = img.size(0) // 2
-            
-            # Use automatic mixed precision for forward pass
-            # with autocast(enabled=self.use_amp):
+            img,target = data
+            img = torch.stack(img,0).cuda()
+            img_pair_num = img.size(0)//2  
             den_scales, final_den, mask, out_den, in_den, attns, f_flow, b_flow, feature1, feature2 = self.net(img)
             
 
@@ -151,7 +148,7 @@ class Trainer():
             for b in range(len(target)):        
                 for key, data in target[b].items():
                     if torch.is_tensor(data):
-                        target[b][key] = data.cuda(non_blocking=True)
+                        target[b][key]=data.cuda()
 
 
 
@@ -194,15 +191,10 @@ class Trainer():
 
 
 
-            # back propagate with AMP
-            self.optimizer.zero_grad(set_to_none=True)  # More efficient than zero_grad()
-            if self.use_amp:
-                self.scaler.scale(all_loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-            else:
-                all_loss.backward()
-                self.optimizer.step()
+            # back propagate
+            self.optimizer.zero_grad()
+            all_loss.backward()
+            self.optimizer.step()
            
 
             batch_loss['den'].update(self.compute_kpi_loss.cnt_loss.sum().item())
@@ -285,7 +277,7 @@ class Trainer():
                     img, target = data
                     img, target = img[0],target[0]
                     
-                    img = torch.stack(img, 0).cuda(non_blocking=True)
+                    img = torch.stack(img,0).cuda()
                     img_pair_num = img.shape[0]//2
  
                     
@@ -853,8 +845,6 @@ if __name__=='__main__':
     
     # os.environ["CUDA_VISIBLE_DEVICES"] = cfg.GPU_ID
     torch.backends.cudnn.benchmark = True
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
 
     # ------------prepare data loader------------
     data_mode = cfg.DATASET
